@@ -3,6 +3,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -44,8 +45,8 @@ func (r *RepoMock) GetUser(ctx context.Context, login, password string) (uuid.UU
 	return userId, nil
 }
 
-func (r *RepoMock) SaveRefresh(ctx context.Context, userId uuid.UUID, rToken string) error {
-	r.commands = append(r.commands, fmt.Sprintf("SaveRefresh(): userId=%q, rToken=%q", userId.String(), rToken))
+func (r *RepoMock) SaveRefresh(ctx context.Context, userId uuid.UUID, rToken string, expAt time.Time) error {
+	r.commands = append(r.commands, fmt.Sprintf("SaveRefresh(): userId=%q, rToken=%q, expAt=%v", userId.String(), rToken, expAt))
 	r.repoTokens[userId] = rToken
 	return nil
 }

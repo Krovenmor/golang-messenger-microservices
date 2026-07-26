@@ -77,7 +77,7 @@ func (a *AuthServiceImpl) newTokens(ctx context.Context, userId uuid.UUID) (*Tok
 	if err != nil {
 		return nil, err
 	}
-	err = a.repo.SaveRefresh(ctx, userId, rToken)
+	err = a.repo.SaveRefresh(ctx, userId, rToken, time.Now().UTC().Add(a.conf.RefreshTokenTTL))
 	if err != nil {
 		return nil, err
 	}

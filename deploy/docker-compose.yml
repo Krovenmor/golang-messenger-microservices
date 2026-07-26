@@ -1,0 +1,37 @@
+services:
+  auth-db:
+    image: postgres:latest
+    environment:
+      - POSTGRES_DB=auth_db
+      - POSTGRES_USER=auth_user
+      - POSTGRES_PASSWORD=auth_pass
+    ports:
+      - "5431:5432"
+    volumes:
+      - auth_db_data:/var/lib/data
+  
+  auth-service:
+    build:
+      context: ..
+      dockerfile: services/auth/Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - JWT_PRVKEY_PATH=/app/certs/jwt/private.key
+      - JWT_PUBKEY_PATH=/app/certs/jwt/public.key
+      - JWT_ACCESS_TTL=30m
+      - JWT_REFRESH_TTL=720h
+      - MIN_PASS_LENGTH=5
+      - MAX_PASS_LENGTH=20
+      - MIN_LOGIN_LENGTH=5
+      - MAX_LOGIN_LENGTH=20
+      - DB_CONN_STRING=postgres://auth_user:auth_pass@auth-db:5432/auth_db
+      - LISTEN_ADDRESS=0.0.0.0
+      - LISTEN_PORT=8081
+    depends_on:
+      - auth-db
+    volumes:
+      - ../certs:/app/certs:ro
+
+volumes:
+  auth_db_data:
