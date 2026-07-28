@@ -1,18 +1,28 @@
 package http
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
 type ProfileBody struct {
-	Name       string `json:"UserName"`
-	PublicKey  string `json:"PubKey"`
-	PrivateKey string `json:"EncryptedPrvKey"`
-	KDFSalt    string `json:"KDFSalt"`
+	Name       string    `json:"Name" validate:"required"`
+	UserName   string    `json:"UserName" validate:"required"`
+	PublicKey  string    `json:"PubKey" validate:"required"`
+	PrivateKey string    `json:"EncryptedPrvKey" validate:"required"`
+	KDFSalt    string    `json:"KDFSalt" validate:"required"`
+	CreatedAt  time.Time `json:"CreatedAt"`
+}
+
+type ProfilePublicBody struct {
+	UserId    uuid.UUID `json:"UserId"`
+	Name      string    `json:"Name"`
+	PublicKey string    `json:"PubKey"`
 }
 
 type NewChatIncomeBody struct {
-	UserId uuid.UUID `json:"UserId"`
+	UserId uuid.UUID `json:"UserId" validate:"required"`
 }
 
 type NewChatResponseBody struct {
@@ -20,7 +30,7 @@ type NewChatResponseBody struct {
 }
 
 type PostMessageIncomeBody struct {
-	Msg string `json:"Message"`
+	Msg string `json:"Message" validate:"required"`
 }
 
 type PostMessageResponseBody struct {

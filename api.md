@@ -7,8 +7,6 @@ Income:
     "login": "YourLogin",
     "password": "YourPassword"
 }  
-Outcome:
-Http StatusOK
 
 - "POST /api/auth/login" - LogIn, get JWT tokens  
 Income:
@@ -41,7 +39,8 @@ Outcome:
 - "POST /api/msg/profile/new" - creates a new profile  
 Income:  
 {  
-    "UserName": "User Name",  
+    "Name": "Your Public Name",
+    "UserName": "Your Unique UserName",  
     "PubKey": "Public key",  
     "EncryptedPrvKey": "Encrypted Private Key",  
     "KDFSalt": "KDF Salt"  
@@ -50,11 +49,27 @@ Income:
 - "GET /api/msg/profile" - get yours profile
 Outcome:  
 {  
+    "Name": "Name",
     "UserName": "User Name",  
     "PubKey": "Public key",  
     "EncryptedPrvKey": "Encrypted Private Key",  
     "KDFSalt": "KDF Salt"  
+    "CreatedAt": "time, example: '2026-07-28T19:56:51.855208Z'"
 }  
+
+- "GET /api/msg/profile/{UserName}" - get other profile  
+Outcome:  
+{  
+    "UserId": "UUID of profile",  
+    "Name": "Name",  
+    "PubKey": "Public key"  
+}  
+
+- "GET /api/msg/profile/chats" - get all your chats  
+Outcome:  
+[  
+    "UUID1", "UUID2", ...  
+]  
 
 - "POST /api/msg/chat/new" - create a new chat  
 Income:  
@@ -62,9 +77,9 @@ Income:
     "UserId": "User UUID to create with"  
 }  
 Outcome:  
-{
-    "ChatId": "Chat UUID"
-}
+{  
+    "ChatId": "Chat UUID"  
+}  
 
 - "POST /api/msg/chat/{uuid}" - post a message to a chat  
 Income:  
@@ -89,3 +104,12 @@ Outcome:
     "CreatedAt": "Time when it was added to server UTC, format RFC 3339, example: '2026-07-28T00:21:09.904497Z'"  
     }, ...  
 ]  
+
+- "GET /api/msg/chat/{uuid}/info" - get chat info  
+Outcome:  
+{  
+    "CreatedAt": "Time when it was created",
+    "Members": [
+        {"UserId": "UUID", "JoinedAt": "Time"}, {...} ...
+    ]
+}

@@ -10,6 +10,7 @@ func ToServiceProfile(p *ProfileBody, userId uuid.UUID) *service.Profile {
 	return &service.Profile{
 		UserId:     userId,
 		Name:       p.Name,
+		UserName:   p.UserName,
 		PublicKey:  p.PublicKey,
 		PrivateKey: p.PrivateKey,
 		KDFSalt:    p.KDFSalt,
@@ -19,9 +20,19 @@ func ToServiceProfile(p *ProfileBody, userId uuid.UUID) *service.Profile {
 func FromServiceProfile(p *service.Profile) *ProfileBody {
 	return &ProfileBody{
 		Name:       p.Name,
+		UserName:   p.UserName,
 		PublicKey:  p.PublicKey,
 		PrivateKey: p.PrivateKey,
 		KDFSalt:    p.KDFSalt,
+		CreatedAt:  p.CreatedAt,
+	}
+}
+
+func ToPublicProfileBody(p *service.Profile) *ProfilePublicBody {
+	return &ProfilePublicBody{
+		UserId:    p.UserId,
+		Name:      p.Name,
+		PublicKey: p.PublicKey,
 	}
 }
 

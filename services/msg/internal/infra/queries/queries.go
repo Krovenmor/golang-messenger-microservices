@@ -16,45 +16,50 @@ func getQuery(queryName string) (string, error) {
 }
 
 type Queries struct {
-	GetChatHistory  string
-	GetProfile      string
-	NewChat         string
-	NewProfile      string
-	PostMessage     string
-	IsProfileInChat string
+	GetChatHistory     string
+	GetProfileId       string
+	NewChat            string
+	NewProfile         string
+	PostMessage        string
+	IsProfileInChat    string
+	GetProfileUserName string
+	GetChats           string
+
+	GetChatInfo    string
+	GetChatMembers string
+
+	GetPrivateChatBetweenTwoPeoples string
 }
 
 func GetQueries() (*Queries, error) {
-	GetChatHistory, err := getQuery("get_chat_history.sql")
+	var err error
+
+	get := func(key string) string {
+		if err != nil {
+			return ""
+		}
+		var query string
+		query, err = getQuery(key + ".sql")
+		return query
+	}
+
+	queries := Queries{
+		GetChatHistory:                  get("get_chat_history"),
+		GetProfileId:                    get("get_profile_id"),
+		NewChat:                         get("new_chat"),
+		NewProfile:                      get("new_profile"),
+		PostMessage:                     get("post_message"),
+		IsProfileInChat:                 get("is_profile_in_chat"),
+		GetProfileUserName:              get("get_profile_username"),
+		GetChats:                        get("get_chats"),
+		GetChatInfo:                     get("get_chat_info"),
+		GetChatMembers:                  get("get_chat_members"),
+		GetPrivateChatBetweenTwoPeoples: get("is_profiles_in_1by1_chat"),
+	}
+
 	if err != nil {
 		return nil, err
 	}
-	GetProfile, err := getQuery("get_profile.sql")
-	if err != nil {
-		return nil, err
-	}
-	NewChat, err := getQuery("new_chat.sql")
-	if err != nil {
-		return nil, err
-	}
-	NewProfile, err := getQuery("new_profile.sql")
-	if err != nil {
-		return nil, err
-	}
-	PostMessage, err := getQuery("post_message.sql")
-	if err != nil {
-		return nil, err
-	}
-	IsProfileInChat, err := getQuery("is_profile_in_chat.sql")
-	if err != nil {
-		return nil, err
-	}
-	return &Queries{
-		GetChatHistory:  GetChatHistory,
-		GetProfile:      GetProfile,
-		NewChat:         NewChat,
-		NewProfile:      NewProfile,
-		PostMessage:     PostMessage,
-		IsProfileInChat: IsProfileInChat,
-	}, nil
+
+	return &queries, nil
 }

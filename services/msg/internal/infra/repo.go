@@ -1,48 +1,16 @@
 package infra
 
 import (
+	"MyMessenger/pkg/repo"
 	"MyMessenger/services/msg/internal/infra/queries"
 	"MyMessenger/services/msg/internal/service"
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-var (
-	ErrAlreadyExists       = errors.New("already exists")
-	ErrNotFound            = errors.New("not found")
-	ErrChatNotFound        = errors.New("chat not found")
-	ErrUserNotFound        = errors.New("user not found")
-	ErrChatNotFoundOrEmpty = errors.New("chat not found or empty")
-)
-
-func getErrorMsg(err error) error {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
-		if pgErr.Code == "23503" {
-			switch pgErr.ConstraintName {
-			case "messages_chatid_fkey":
-				return ErrChatNotFound
-			case "messages_sentid_fkey":
-				return ErrUserNotFound
-			case "chatmembers_userid_fkey":
-				return ErrUserNotFound
-			}
-		}
-		if pgErr.Code == "23505" {
-			return ErrAlreadyExists
-		}
-	}
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrNotFound
-	}
-	return err
-}
 
 type PostagreRepo struct {
 	pool *pgxpool.Pool
@@ -63,13 +31,17 @@ func NewRepo(pool *pgxpool.Pool) (*PostagreRepo, error) {
 	}, nil
 }
 
-func (r *PostagreRepo) NewProfile(ctx context.Context, profile service.Profile) error {
-	t, err := r.pool.Exec(ctx, r.q.NewProfile, profile.UserId, profile.Name, profile.PublicKey, profile.PrivateKey, profile.KDFSalt)
+func (r *PostagreRepo) NewProfile(ctx context.Context, profile *service.Profile) error {
+	_, err := r.pool.Exec(ctx, r.q.NewProfile,
+		profile.UserId,
+		profile.UserName,
+		profile.Name,
+		profile.PublicKey,
+		profile.PrivateKey,
+		profile.KDFSalt,
+	)
 	if err != nil {
 		return getErrorMsg(err)
-	}
-	if t.RowsAffected() == 0 {
-		return ErrAlreadyExists
 	}
 	return nil
 }
@@ -85,7 +57,7 @@ func (r *PostagreRepo) NewChat(ctx context.Context, chatId, fUser, sUser uuid.UU
 	return nil
 }
 
-func (r *PostagreRepo) PostMessage(ctx context.Context, chatId uuid.UUID, msg service.Message) error {
+func (r *PostagreRepo) PostMessage(ctx context.Context, chatId uuid.UUID, msg *service.Message) error {
 	t, err := r.pool.Exec(ctx, r.q.PostMessage, msg.MessageId, chatId, msg.SenderId, msg.Message)
 	if err != nil {
 		return getErrorMsg(err)
@@ -96,38 +68,55 @@ func (r *PostagreRepo) PostMessage(ctx context.Context, chatId uuid.UUID, msg se
 	return nil
 }
 
-func (r *PostagreRepo) GetProfile(ctx context.Context, userId uuid.UUID) (*service.Profile, error) {
-	var profile service.Profile
-	err := r.pool.QueryRow(ctx, r.q.GetProfile, userId).Scan(
-		&profile.UserId,
-		&profile.Name,
-		&profile.PublicKey,
-		&profile.PrivateKey,
-		&profile.KDFSalt,
+func (r *PostagreRepo) GetProfileById(ctx context.Context, userId uuid.UUID) (*service.Profile, error) {
+	return getProfileByVal(ctx, r.pool, r.q.GetProfileId, userId)
+}
+
+func (r *PostagreRepo) GetProfileByUserName(ctx context.Context, username string) (*service.Profile, error) {
+	return getProfileByVal(ctx, r.pool, r.q.GetProfileUserName, username)
+}
+
+func (r *PostagreRepo) GetChats(ctx context.Context, userId uuid.UUID) ([]uuid.UUID, error) {
+	collectFunc := func(row pgx.CollectableRow) (uuid.UUID, error) {
+		var id uuid.UUID
+		err := row.Scan(&id)
+		return id, err
+	}
+	chats, err := repo.GetSliceQueryByFunc(ctx, r.pool, r.q.GetChats, collectFunc, userId)
+	if err != nil {
+		return chats, getErrorMsg(err)
+	}
+	return chats, nil
+}
+
+func (r *PostagreRepo) GetChatMembers(ctx context.Context, chatId uuid.UUID) ([]service.ChatMember, error) {
+	members, err := repo.GetSliceQueryByPos[service.ChatMember](ctx, r.pool, r.q.GetChatMembers, chatId)
+	if err != nil {
+		return members, getErrorMsg(err)
+	}
+	return members, nil
+}
+
+func (r *PostagreRepo) GetChatInfo(ctx context.Context, chatId uuid.UUID) (*service.ChatInfo, error) {
+	var info service.ChatInfo
+	err := r.pool.QueryRow(ctx, r.q.GetChatInfo, chatId).Scan(
+		&info.CreatedAt,
 	)
 	if err != nil {
 		return nil, getErrorMsg(err)
 	}
-	return &profile, nil
+	info.ChatMembers, err = r.GetChatMembers(ctx, chatId)
+	if err != nil {
+		return nil, err
+	}
+	return &info, nil
 }
 
 func (r *PostagreRepo) GetChatHistory(ctx context.Context, chatId uuid.UUID, fromId uuid.UUID, q int) ([]service.Message, error) {
-	messages := []service.Message{}
-	rows, err := r.pool.Query(ctx, r.q.GetChatHistory, chatId, fromId, q)
+	messages, err := repo.GetSliceQueryByPos[service.Message](ctx, r.pool, r.q.GetChatHistory, chatId, fromId, q)
 	if err != nil {
 		return messages, getErrorMsg(err)
 	}
-	defer rows.Close()
-
-	messages, err = pgx.CollectRows(rows, pgx.RowToStructByName[service.Message])
-	if err != nil {
-		return nil, getErrorMsg(err)
-	}
-
-	if len(messages) == 0 {
-		return nil, ErrChatNotFoundOrEmpty
-	}
-
 	return messages, nil
 }
 
@@ -140,4 +129,15 @@ func (r *PostagreRepo) IsProfileInChat(ctx context.Context, userId, chatId uuid.
 		return ErrNotFound
 	}
 	return nil
+}
+
+func (r *PostagreRepo) IsProfilesHaveAPrivateChat(ctx context.Context, userIdF, userIdS uuid.UUID) (uuid.UUID, error) {
+	var chatId uuid.UUID
+	err := r.pool.QueryRow(ctx, r.q.GetPrivateChatBetweenTwoPeoples, userIdF, userIdS).Scan(
+		&chatId,
+	)
+	if err != nil {
+		return chatId, getErrorMsg(err)
+	}
+	return chatId, nil
 }

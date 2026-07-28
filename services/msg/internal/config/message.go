@@ -6,6 +6,9 @@ type MessageConfig struct {
 	MinNameLen int
 	MaxNameLen int
 
+	MinUserNameLen int
+	MaxUserNameLen int
+
 	MinMsgLen int
 	MaxMsgLen int
 
@@ -34,16 +37,18 @@ func GetMessageConfig() (*MessageConfig, error) {
 	}
 
 	conf = MessageConfig{
-		MinNameLen:   get("MIN_NAME_LEN"),
-		MaxNameLen:   get("MAX_NAME_LEN"),
-		MinMsgLen:    get("MIN_MSG_LEN"),
-		MaxMsgLen:    get("MAX_MSG_LEN"),
-		MinKeysLen:   get("MIN_KEYS_LEN"),
-		MaxPubKeyLen: get("MAX_PUBKEY_LEN"),
-		MaxPrvKeyLen: get("MAX_PRVKEY_LEN"),
-		MaxSaltLen:   get("MAX_SALT_LEN"),
-		MinQuantity:  get("MIN_QUANTITY_QUERIES"),
-		MaxQuantity:  get("MAX_QUANTITY_QUERIES"),
+		MinNameLen:     get("MIN_NAME_LEN"),
+		MaxNameLen:     get("MAX_NAME_LEN"),
+		MinUserNameLen: get("MIN_USERNAME_LEN"),
+		MaxUserNameLen: get("MAX_USERNAME_LEN"),
+		MinMsgLen:      get("MIN_MSG_LEN"),
+		MaxMsgLen:      get("MAX_MSG_LEN"),
+		MinKeysLen:     get("MIN_KEYS_LEN"),
+		MaxPubKeyLen:   get("MAX_PUBKEY_LEN"),
+		MaxPrvKeyLen:   get("MAX_PRVKEY_LEN"),
+		MaxSaltLen:     get("MAX_SALT_LEN"),
+		MinQuantity:    get("MIN_QUANTITY_QUERIES"),
+		MaxQuantity:    get("MAX_QUANTITY_QUERIES"),
 	}
 
 	if err != nil {

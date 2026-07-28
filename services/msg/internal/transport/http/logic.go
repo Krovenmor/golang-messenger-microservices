@@ -2,6 +2,7 @@ package http
 
 import (
 	"MyMessenger/pkg/utils"
+	"MyMessenger/services/msg/internal/service"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,13 +13,12 @@ import (
 )
 
 func recv[T any](w http.ResponseWriter, r *http.Request) (*T, error) {
-	var toResv T
-	err := utils.Recv(r, &toResv)
+	toRecv, err := utils.Recv[T](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return nil, err
 	}
-	return &toResv, nil
+	return toRecv, nil
 }
 
 func getUuidFromPath(req *http.Request) (uuid.UUID, error) {
@@ -79,14 +79,14 @@ func (h *Handler) NewProfile(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetProfilePrivate(w http.ResponseWriter, r *http.Request) {
 	userId, err := utils.GetUuidFromContext(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	profile, err := h.msg.GetProfile(r.Context(), userId)
+	profile, err := h.msg.GetProfileById(r.Context(), userId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -98,23 +98,44 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	utils.Send(w, FromServiceProfile(profile))
 }
 
+func (h *Handler) GetProfilePublic(w http.ResponseWriter, r *http.Request) {
+	userName := r.PathValue("username")
+	if userName == "" {
+		http.Error(w, "You must provide username", http.StatusBadRequest)
+		return
+	}
+	profile, err := h.msg.GetProfileByUserName(r.Context(), userName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if profile == nil {
+		http.Error(w, "Trouble with getting profile", http.StatusInternalServerError)
+		return
+	}
+	utils.Send(w, ToPublicProfileBody(profile))
+}
+
 func (h *Handler) NewChat(w http.ResponseWriter, r *http.Request) {
+	body, err := recv[NewChatIncomeBody](w, r)
+	if err != nil {
+		return
+	}
 	userId, err := utils.GetUuidFromContext(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	body, err := recv[NewChatIncomeBody](w, r)
-	if err != nil {
-		return
-	}
 	chatId, err := h.msg.CreateNewChat(r.Context(), userId, body.UserId)
 	if err != nil {
+		if errors.Is(err, service.ErrAlreadyExists) {
+			utils.SendWithStatus(w, &NewChatResponseBody{ChatId: chatId}, http.StatusOK)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	utils.Send(w, &NewChatResponseBody{ChatId: chatId})
+	utils.SendWithStatus(w, &NewChatResponseBody{ChatId: chatId}, http.StatusCreated)
 }
 
 func (h *Handler) PostMessage(w http.ResponseWriter, r *http.Request) {
@@ -140,7 +161,35 @@ func (h *Handler) PostMessage(w http.ResponseWriter, r *http.Request) {
 	utils.Send(w, &PostMessageResponseBody{MessageId: mId})
 }
 
-func (h *Handler) GetChat(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetProfileChats(w http.ResponseWriter, r *http.Request) {
+	userId, err := utils.GetUuidFromContext(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	chats, err := h.msg.GetChats(r.Context(), userId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	utils.Send(w, &chats)
+}
+
+func (h *Handler) GetChatInfo(w http.ResponseWriter, r *http.Request) {
+	chatId, err := getUuidFromPath(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	chatInfo, err := h.msg.GetChatInfo(r.Context(), chatId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	utils.Send(w, &chatInfo)
+}
+
+func (h *Handler) GetChatMessages(w http.ResponseWriter, r *http.Request) {
 	chatId, err := getUuidFromPath(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

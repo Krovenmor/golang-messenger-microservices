@@ -17,11 +17,14 @@ func NewHandler(msgService service.MessageService, auth *jwt.Authenticator) *Han
 
 func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {
 	m.HandleFunc("POST /api/msg/profile/new", h.NewProfile)
-	m.HandleFunc("GET /api/msg/profile", h.GetProfile)
+	m.HandleFunc("GET /api/msg/profile", h.GetProfilePrivate)
+	m.HandleFunc("GET /api/msg/profile/{username}", h.GetProfilePublic)
+	m.HandleFunc("GET /api/msg/profile/chats", h.GetProfileChats)
 
 	m.HandleFunc("POST /api/msg/chat/new", h.NewChat)
 	m.HandleFunc("POST /api/msg/chat/{uuid}", h.PostMessage)
-	m.HandleFunc("GET /api/msg/chat/{uuid}", h.GetChat)
+	m.HandleFunc("GET /api/msg/chat/{uuid}", h.GetChatMessages)
+	m.HandleFunc("GET /api/msg/chat/{uuid}/info", h.GetChatInfo)
 
 	return h.auth.Middleware(m)
 }
