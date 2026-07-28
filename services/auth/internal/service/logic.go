@@ -1,6 +1,7 @@
 package service
 
 import (
+	j "MyMessenger/pkg/jwt"
 	"MyMessenger/services/auth/internal/config"
 	"context"
 	"crypto/rsa"
@@ -19,6 +20,8 @@ type AuthServiceImpl struct {
 
 	PubKey *rsa.PublicKey
 	PrvKey *rsa.PrivateKey
+
+	jwtChecker j.JWTChecker
 }
 
 func NewAuth(repo AuthRepo, conf config.AuthConfig) *AuthServiceImpl {
@@ -33,7 +36,7 @@ func NewAuth(repo AuthRepo, conf config.AuthConfig) *AuthServiceImpl {
 		log.Fatalf("NewAuth(): Trouble with parsing pubKey: %q", err.Error())
 	}
 
-	return &AuthServiceImpl{repo: repo, conf: conf, PubKey: pubKey, PrvKey: prvKey}
+	return &AuthServiceImpl{repo: repo, conf: conf, PrvKey: prvKey, jwtChecker: *j.NewJwtCheckerKey(pubKey)}
 }
 
 func (a *AuthServiceImpl) checkLoginPass(login, password string) error {
@@ -69,11 +72,11 @@ func (a *AuthServiceImpl) Register(ctx context.Context, login, password string) 
 }
 
 func (a *AuthServiceImpl) newTokens(ctx context.Context, userId uuid.UUID) (*Tokens, error) {
-	aToken, err := GenToken(userId, a.conf.AccessTokenTTL, a.PrvKey)
+	aToken, err := GenToken(userId, a.conf.AccessTokenTTL, a.PrvKey, j.Access)
 	if err != nil {
 		return nil, err
 	}
-	rToken, err := GenToken(userId, a.conf.RefreshTokenTTL, a.PrvKey)
+	rToken, err := GenToken(userId, a.conf.RefreshTokenTTL, a.PrvKey, j.Refresh)
 	if err != nil {
 		return nil, err
 	}
@@ -98,15 +101,11 @@ func (a *AuthServiceImpl) LogIn(ctx context.Context, login, password string) (*T
 }
 
 func (a *AuthServiceImpl) IsValidAccess(ctx context.Context, aToken string) error {
-	claims, err := IsValidToken(aToken, a.PubKey)
+	claims, err := a.jwtChecker.IsValidToken(aToken)
 	if err != nil {
 		return err
 	}
-	subj, err := claims.GetSubject()
-	if err != nil {
-		return err
-	}
-	userId, err := uuid.Parse(subj)
+	userId, err := uuid.Parse(claims.Subject)
 	if err != nil {
 		return err
 	}
@@ -117,7 +116,7 @@ func (a *AuthServiceImpl) IsValidAccess(ctx context.Context, aToken string) erro
 }
 
 func (a *AuthServiceImpl) UpdateTokens(ctx context.Context, rToken string) (*Tokens, error) {
-	claims, err := IsValidToken(rToken, a.PubKey)
+	claims, err := a.jwtChecker.IsValidToken(rToken)
 	if err != nil {
 		return nil, err
 	}

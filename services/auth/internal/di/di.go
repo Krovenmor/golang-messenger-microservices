@@ -1,39 +1,18 @@
 package di
 
 import (
+	stdconfig "MyMessenger/pkg/config"
+	"MyMessenger/pkg/di"
+	"MyMessenger/pkg/repo"
 	"MyMessenger/services/auth/internal/config"
 	"MyMessenger/services/auth/internal/infra"
+	"MyMessenger/services/auth/internal/infra/migrations"
 	"MyMessenger/services/auth/internal/service"
 	web "MyMessenger/services/auth/internal/transport/http"
-	"context"
-	"log"
-	"net"
 	"net/http"
 
 	"go.uber.org/fx"
 )
-
-func InvokeServer(lf fx.Lifecycle, conf config.ServConfig, h http.Handler) {
-	serv := http.Server{
-		Addr:    conf.Address,
-		Handler: h,
-	}
-	lf.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			l, err := net.Listen("tcp", serv.Addr)
-			if err != nil {
-				return err
-			}
-			log.Printf("Server started on %q", serv.Addr)
-			go serv.Serve(l)
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
-			log.Printf("Stopping server")
-			return serv.Shutdown(ctx)
-		},
-	})
-}
 
 func GetModule() fx.Option {
 	return fx.Options(
@@ -41,18 +20,18 @@ func GetModule() fx.Option {
 		// Configs
 		fx.Provide(
 			config.GetAuthConfig,
-			config.GetRepoConfig,
-			config.GetServConfig,
+			stdconfig.GetRepoConfig,
+			stdconfig.GetServConfig,
 		),
 
 		// Pool
 		fx.Provide(
-			infra.NewPool,
+			repo.NewPool,
 		),
 
 		// Make migrations
 		fx.Invoke(
-			infra.MakeMigrations,
+			migrations.MakeMigrations,
 		),
 
 		// Repo Service
@@ -86,7 +65,7 @@ func GetModule() fx.Option {
 
 		// Final, main invoke
 		fx.Invoke(
-			InvokeServer,
+			di.InvokeServer,
 		),
 	)
 }

@@ -1,6 +1,7 @@
 package tests
 
 import (
+	j "MyMessenger/pkg/jwt"
 	"MyMessenger/services/auth/internal/config"
 	"MyMessenger/services/auth/internal/service"
 	"context"
@@ -217,17 +218,17 @@ func TestJWT_Validation(t *testing.T) {
 
 	testUserID := uuid.New()
 
-	validToken, err := service.GenToken(testUserID, 1*time.Hour, validPrvKey)
+	validToken, err := service.GenToken(testUserID, 1*time.Hour, validPrvKey, j.Access)
 	if err != nil {
 		t.Fatalf("failed to create valid token: %v", err)
 	}
 
-	expiredToken, err := service.GenToken(testUserID, -1*time.Minute, validPrvKey)
+	expiredToken, err := service.GenToken(testUserID, -1*time.Minute, validPrvKey, j.Access)
 	if err != nil {
 		t.Fatalf("failed to create expired token: %v", err)
 	}
 
-	forgedToken, err := service.GenToken(testUserID, 1*time.Hour, attackerPrvKey)
+	forgedToken, err := service.GenToken(testUserID, 1*time.Hour, attackerPrvKey, j.Access)
 	if err != nil {
 		t.Fatalf("failed to create forged token: %v", err)
 	}
@@ -282,7 +283,8 @@ func TestJWT_Validation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			claims, err := service.IsValidToken(tt.tokenStr, tt.pubKey)
+			checker := j.NewJwtCheckerKey(tt.pubKey)
+			claims, err := checker.IsValidToken(tt.tokenStr)
 
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("IsValidToken() error = %v, wantErr %v", err, tt.wantErr)
@@ -346,7 +348,7 @@ func TestAuthService_TokenSecurityAndEdgeCases(t *testing.T) {
 		}
 		prvKey, err := jwt.ParseRSAPrivateKeyFromPEM(conf.PrvKey)
 
-		nilUUIDToken, err := service.GenToken(uuid.Nil, 1*time.Hour, prvKey)
+		nilUUIDToken, err := service.GenToken(uuid.Nil, 1*time.Hour, prvKey, j.Access)
 		if err == nil {
 			errValid := auth.IsValidAccess(ctx, nilUUIDToken)
 			if errValid == nil {

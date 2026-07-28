@@ -7,7 +7,7 @@ RUN go mod download
 COPY pkg/ pkg/
 COPY services/auth/ services/auth/
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /auth-service ./services/auth/cmd/auth/
+RUN CGO_ENABLED=0 GOOS=linux go build -o /auth-service ./services/auth/cmd/api/
 
 FROM alpine:latest
 WORKDIR /app
