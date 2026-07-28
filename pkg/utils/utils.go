@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -18,14 +19,30 @@ func Send[T any](w http.ResponseWriter, toSend *T) {
 	}
 }
 
-func Recv[T any](r *http.Request, toRcv *T) error {
+func SendWithStatus[T any](w http.ResponseWriter, toSend *T, status int) {
+	w.Header().Set("Content-type", "application/json")
+	w.WriteHeader(status)
+	err := json.NewEncoder(w).Encode(toSend)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+var validate = validator.New()
+
+func Recv[T any](r *http.Request) (*T, error) {
+	var val T
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
-	err := dec.Decode(toRcv)
+	err := dec.Decode(&val)
 	if err != nil {
-		return fmt.Errorf("Not valid JSON: %w", err)
+		return nil, fmt.Errorf("Not valid JSON: %w", err)
 	}
-	return nil
+	err = validate.Struct(&val)
+	if err != nil {
+		return nil, fmt.Errorf("Not valid JSON: %w", err)
+	}
+	return &val, nil
 }
 
 func GetUuidFromContext(r *http.Request) (uuid.UUID, error) {
