@@ -15,6 +15,7 @@ type MessageRepo interface {
 	GetProfileById(ctx context.Context, userId uuid.UUID) (*Profile, error)
 	GetProfileByUserName(ctx context.Context, username string) (*Profile, error)
 	GetChats(ctx context.Context, userId uuid.UUID) ([]uuid.UUID, error)
+	GetChatsExtended(ctx context.Context, userId uuid.UUID) ([]ChatFullInfo, error)
 	GetChatInfo(ctx context.Context, chatId uuid.UUID) (*ChatInfo, error)
 	GetChatHistory(ctx context.Context, chatId uuid.UUID, fromId uuid.UUID, q int) ([]Message, error)
 

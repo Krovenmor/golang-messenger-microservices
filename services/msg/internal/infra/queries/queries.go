@@ -23,7 +23,9 @@ type Queries struct {
 	PostMessage        string
 	IsProfileInChat    string
 	GetProfileUserName string
-	GetChats           string
+
+	GetChats         string
+	GetChatsExtended string
 
 	GetChatInfo    string
 	GetChatMembers string
@@ -55,6 +57,7 @@ func GetQueries() (*Queries, error) {
 		GetChatInfo:                     get("get_chat_info"),
 		GetChatMembers:                  get("get_chat_members"),
 		GetPrivateChatBetweenTwoPeoples: get("is_profiles_in_1by1_chat"),
+		GetChatsExtended:                get("get_chats_extended"),
 	}
 
 	if err != nil {

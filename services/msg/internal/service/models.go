@@ -32,3 +32,14 @@ type ChatInfo struct {
 	CreatedAt   time.Time
 	ChatMembers []ChatMember
 }
+
+type ChatFullInfo struct {
+	ChatId    uuid.UUID
+	UserId    uuid.UUID
+	Name      string
+	UserName  string
+	MessageId uuid.UUID
+	SenderId  uuid.UUID
+	Message   string
+	CreatedAt time.Time
+}

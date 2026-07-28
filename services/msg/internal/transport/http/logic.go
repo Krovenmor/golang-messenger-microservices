@@ -175,6 +175,20 @@ func (h *Handler) GetProfileChats(w http.ResponseWriter, r *http.Request) {
 	utils.Send(w, &chats)
 }
 
+func (h *Handler) GetProfileChatsExtended(w http.ResponseWriter, r *http.Request) {
+	userId, err := utils.GetUuidFromContext(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	chats, err := h.msg.GetChatsExtended(r.Context(), userId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	utils.Send(w, &chats)
+}
+
 func (h *Handler) GetChatInfo(w http.ResponseWriter, r *http.Request) {
 	chatId, err := getUuidFromPath(r)
 	if err != nil {

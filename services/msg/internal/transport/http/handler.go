@@ -20,6 +20,7 @@ func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {
 	m.HandleFunc("GET /api/msg/profile", h.GetProfilePrivate)
 	m.HandleFunc("GET /api/msg/profile/{username}", h.GetProfilePublic)
 	m.HandleFunc("GET /api/msg/profile/chats", h.GetProfileChats)
+	m.HandleFunc("GET /api/msg/profile/chats/full", h.GetProfileChatsExtended)
 
 	m.HandleFunc("POST /api/msg/chat/new", h.NewChat)
 	m.HandleFunc("POST /api/msg/chat/{uuid}", h.PostMessage)

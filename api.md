@@ -71,6 +71,21 @@ Outcome:
     "UUID1", "UUID2", ...  
 ]  
 
+- "GET /api/msg/profile/chats/full" - get all your chats with all info  
+Outcome:
+[
+    {
+        "ChatId": "UUID",
+        "UserId": "UUID",
+        "Name": "Name",
+        "UserName": "Unique UserName",
+        "MessageId": "UUIDv7",
+        "SenderId": "UUID",
+        "Message": "text ...",
+        "CreatedAt": "time UTC"
+    }, ...
+]
+
 - "POST /api/msg/chat/new" - create a new chat  
 Income:  
 {  

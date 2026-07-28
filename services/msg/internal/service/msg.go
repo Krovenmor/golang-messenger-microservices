@@ -16,5 +16,6 @@ type MessageService interface {
 
 	GetChatInfo(ctx context.Context, chatId uuid.UUID) (*ChatInfo, error)
 	GetChats(ctx context.Context, userId uuid.UUID) ([]uuid.UUID, error)
+	GetChatsExtended(ctx context.Context, userId uuid.UUID) ([]ChatFullInfo, error)
 	GetChatHistory(ctx context.Context, chatId uuid.UUID, fromUserId, fromMsgId uuid.UUID, q int) ([]Message, error)
 }

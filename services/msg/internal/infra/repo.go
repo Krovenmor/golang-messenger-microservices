@@ -89,6 +89,14 @@ func (r *PostagreRepo) GetChats(ctx context.Context, userId uuid.UUID) ([]uuid.U
 	return chats, nil
 }
 
+func (r *PostagreRepo) GetChatsExtended(ctx context.Context, userId uuid.UUID) ([]service.ChatFullInfo, error) {
+	chats, err := repo.GetSliceQueryByPos[service.ChatFullInfo](ctx, r.pool, r.q.GetChatsExtended, userId)
+	if err != nil {
+		return chats, getErrorMsg(err)
+	}
+	return chats, nil
+}
+
 func (r *PostagreRepo) GetChatMembers(ctx context.Context, chatId uuid.UUID) ([]service.ChatMember, error) {
 	members, err := repo.GetSliceQueryByPos[service.ChatMember](ctx, r.pool, r.q.GetChatMembers, chatId)
 	if err != nil {

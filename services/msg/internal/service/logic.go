@@ -73,6 +73,10 @@ func (m *MessageServiceImpl) GetChats(ctx context.Context, userId uuid.UUID) ([]
 	return m.repo.GetChats(ctx, userId)
 }
 
+func (m *MessageServiceImpl) GetChatsExtended(ctx context.Context, userId uuid.UUID) ([]ChatFullInfo, error) {
+	return m.repo.GetChatsExtended(ctx, userId)
+}
+
 func (m *MessageServiceImpl) GetChatInfo(ctx context.Context, chatId uuid.UUID) (*ChatInfo, error) {
 	return m.repo.GetChatInfo(ctx, chatId)
 }
