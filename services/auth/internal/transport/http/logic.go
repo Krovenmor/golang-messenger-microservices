@@ -7,8 +7,7 @@ import (
 )
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	var body AuthIncomeBody
-	err := utils.Recv(r, &body)
+	body, err := utils.Recv[AuthIncomeBody](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -27,8 +26,7 @@ func sendTokens(w http.ResponseWriter, tokens *service.Tokens) {
 }
 
 func (h *Handler) LogIn(w http.ResponseWriter, r *http.Request) {
-	var body AuthIncomeBody
-	err := utils.Recv(r, &body)
+	body, err := utils.Recv[AuthIncomeBody](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -46,8 +44,7 @@ func (h *Handler) LogIn(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	var body TokensUpdateIncome
-	err := utils.Recv(r, &body)
+	body, err := utils.Recv[TokensUpdateIncome](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

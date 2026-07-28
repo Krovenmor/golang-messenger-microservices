@@ -1,8 +1,8 @@
 package http
 
 type AuthIncomeBody struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
+	Login    string `json:"login" validate:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
 type TokensOutcomeBody struct {
@@ -11,5 +11,5 @@ type TokensOutcomeBody struct {
 }
 
 type TokensUpdateIncome struct {
-	RToken string `json:"refreshToken"`
+	RToken string `json:"refreshToken" validate:"required"`
 }
