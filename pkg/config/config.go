@@ -1,7 +1,7 @@
 package config
 
 import (
-	"errors"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -21,7 +21,7 @@ func GetEnvVar(key string) (string, error) {
 	val, isExists := os.LookupEnv(key)
 	if !isExists {
 		log.Printf("config::GetEnvVar(%q): Not found", key)
-		return val, errors.New("Not found")
+		return val, fmt.Errorf("EnvVar: %q not found", key)
 	}
 	return val, nil
 }
