@@ -9,6 +9,11 @@ services:
       - "5431:5432"
     volumes:
       - auth_db_data:/var/lib/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
   
   auth-service:
     build:
@@ -29,9 +34,54 @@ services:
       - LISTEN_ADDRESS=0.0.0.0
       - LISTEN_PORT=8081
     depends_on:
-      - auth-db
+      auth-db:
+        condition: service_healthy
     volumes:
-      - ../certs:/app/certs:ro
+      - ../certs/jwt:/app/certs/jwt:ro
+  
+  msg-db:
+    image: postgres:latest
+    environment:
+      - POSTGRES_DB=msg_db
+      - POSTGRES_USER=msg_user
+      - POSTGRES_PASSWORD=msg_pass
+    ports:
+      - "5430:5432"
+    volumes:
+      - msg_db_data:/var/lib/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U msg_user -d msg_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+  
+  msg-service:
+    build:
+      context: ..
+      dockerfile: services/msg/Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      - JWT_PUBKEY_PATH=/app/certs/jwt/public.key
+      - DB_CONN_STRING=postgres://msg_user:msg_pass@msg-db:5432/msg_db
+      - LISTEN_ADDRESS=0.0.0.0
+      - LISTEN_PORT=8082
+      - MIN_NAME_LEN=5
+      - MAX_NAME_LEN=50
+      - MIN_MSG_LEN=1
+      - MAX_MSG_LEN=500
+      - MIN_KEYS_LEN=10
+      - MAX_PUBKEY_LEN=255
+      - MAX_PRVKEY_LEN=600
+      - MAX_SALT_LEN=255
+      - MIN_QUANTITY_QUERIES=1
+      - MAX_QUANTITY_QUERIES=100
+    depends_on:
+      msg-db:
+        condition: service_healthy
+    volumes:
+      - ../certs/jwt/public.key:/app/certs/jwt/public.key:ro
 
 volumes:
   auth_db_data:
+  msg_db_data:
