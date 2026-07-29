@@ -72,3 +72,8 @@ func (r *RepoMock) DeleteRefresh(ctx context.Context, userId uuid.UUID, rToken s
 	}
 	return nil
 }
+
+func (r *RepoMock) DeleteExpiredRefreshTokens(ctx context.Context, userId uuid.UUID) error {
+	r.commands = append(r.commands, fmt.Sprintf("DeleteExpiredRefreshTokens(): userId=%q", userId.String()))
+	return nil
+}

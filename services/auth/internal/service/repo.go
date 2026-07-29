@@ -15,4 +15,5 @@ type AuthRepo interface {
 	FindRefresh(ctx context.Context, userId uuid.UUID, rToken string) error
 
 	DeleteRefresh(ctx context.Context, userId uuid.UUID, rToken string) error
+	DeleteExpiredRefreshTokens(ctx context.Context, userId uuid.UUID) error
 }

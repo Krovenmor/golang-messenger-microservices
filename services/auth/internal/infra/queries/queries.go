@@ -16,11 +16,12 @@ func getQuery(queryName string) (string, error) {
 }
 
 type Queries struct {
-	AddUser     string
-	GetUser     string
-	SaveRefresh string
-	FindRefresh string
-	DelRefresh  string
+	AddUser       string
+	GetUser       string
+	SaveRefresh   string
+	FindRefresh   string
+	DelRefresh    string
+	ClrExpRefresh string
 }
 
 func GetQueries() (*Queries, error) {
@@ -44,11 +45,16 @@ func GetQueries() (*Queries, error) {
 	if err != nil {
 		return nil, err
 	}
+	clrRefresh, err := getQuery("clear_expired_refresh_tokens.sql")
+	if err != nil {
+		return nil, err
+	}
 	return &Queries{
-		AddUser:     addUser,
-		GetUser:     getUser,
-		SaveRefresh: saveRefresh,
-		FindRefresh: findRefresh,
-		DelRefresh:  delRefresh,
+		AddUser:       addUser,
+		GetUser:       getUser,
+		SaveRefresh:   saveRefresh,
+		FindRefresh:   findRefresh,
+		DelRefresh:    delRefresh,
+		ClrExpRefresh: clrRefresh,
 	}, nil
 }

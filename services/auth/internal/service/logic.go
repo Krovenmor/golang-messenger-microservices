@@ -97,6 +97,7 @@ func (a *AuthServiceImpl) LogIn(ctx context.Context, login, password string) (*T
 	if err != nil {
 		return nil, err
 	}
+	a.repo.DeleteExpiredRefreshTokens(ctx, userId)
 	return a.newTokens(ctx, userId)
 }
 

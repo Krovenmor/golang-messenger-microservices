@@ -1,2 +1,2 @@
 delete from tokens
-where userid = $1 and rtoken = $2;
+where user_id = $1 and r_token = $2;
