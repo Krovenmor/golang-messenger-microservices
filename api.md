@@ -71,16 +71,13 @@ Outcome:
     "UUID1", "UUID2", ...  
 ]  
 
-- "GET /api/msg/profile/chats/full" - get all your chats with all info  
+- "GET /api/msg/profile/chats/full" - get all your chats with extended info  
 Outcome:
 [
     {
         "ChatId": "UUID",
-        "UserId": "UUID",
-        "Name": "Name",
-        "UserName": "Unique UserName",
-        "MessageId": "UUIDv7",
-        "SenderId": "UUID",
+        "MessageId": "Last Message Id in chat, UUIDv7",
+        "SenderId": "Who wrote that message, UUID",
         "Message": "text ...",
         "CreatedAt": "time UTC"
     }, ...

@@ -35,9 +35,6 @@ type ChatInfo struct {
 
 type ChatFullInfo struct {
 	ChatId    uuid.UUID
-	UserId    uuid.UUID
-	Name      string
-	UserName  string
 	MessageId uuid.UUID
 	SenderId  uuid.UUID
 	Message   string
