@@ -32,6 +32,7 @@ func ToPublicProfileBody(p *service.Profile) *ProfilePublicBody {
 	return &ProfilePublicBody{
 		UserId:    p.UserId,
 		Name:      p.Name,
+		UserName:  p.UserName,
 		PublicKey: p.PublicKey,
 	}
 }

@@ -18,6 +18,7 @@ type ProfileBody struct {
 type ProfilePublicBody struct {
 	UserId    uuid.UUID `json:"UserId"`
 	Name      string    `json:"Name"`
+	UserName  string    `json:"UserName"`
 	PublicKey string    `json:"PubKey"`
 }
 

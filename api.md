@@ -57,11 +57,13 @@ Outcome:
     "CreatedAt": "time, example: '2026-07-28T19:56:51.855208Z'"
 }  
 
-- "GET /api/msg/profile/{UserName}" - get other profile  
+- "GET /api/msg/profile/{target}" - get other profile  
+{target} - UserId (UUID) or UserName  
 Outcome:  
 {  
     "UserId": "UUID of profile",  
     "Name": "Name",  
+    "UserName": "User Name",  
     "PubKey": "Public key"  
 }  
 

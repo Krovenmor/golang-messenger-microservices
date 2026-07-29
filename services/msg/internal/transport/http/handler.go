@@ -18,7 +18,7 @@ func NewHandler(msgService service.MessageService, auth *jwt.Authenticator) *Han
 func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {
 	m.HandleFunc("POST /api/msg/profile/new", h.NewProfile)
 	m.HandleFunc("GET /api/msg/profile", h.GetProfilePrivate)
-	m.HandleFunc("GET /api/msg/profile/{username}", h.GetProfilePublic)
+	m.HandleFunc("GET /api/msg/profile/{target}", h.GetProfilePublic)
 	m.HandleFunc("GET /api/msg/profile/chats", h.GetProfileChats)
 	m.HandleFunc("GET /api/msg/profile/chats/full", h.GetProfileChatsExtended)
 
