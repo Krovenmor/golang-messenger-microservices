@@ -73,8 +73,15 @@ func (m *MessageServiceImpl) checkProfile(p *Profile) error {
 	return nil
 }
 
-func (m *MessageServiceImpl) checkMsg(msg *Message) error {
-	lMsg := len(msg.Message)
+func (m *MessageServiceImpl) checkMessage(msg *Message) error {
+	if msg.Message == nil {
+		return fmt.Errorf("No message")
+	}
+	return m.checkMessageText(*msg.Message)
+}
+
+func (m *MessageServiceImpl) checkMessageText(text string) error {
+	lMsg := len(text)
 	if lMsg < m.conf.MinMsgLen {
 		return fmt.Errorf("Message len must be > %d", m.conf.MinMsgLen)
 	}
@@ -84,10 +91,7 @@ func (m *MessageServiceImpl) checkMsg(msg *Message) error {
 	return nil
 }
 
-func (m *MessageServiceImpl) checkFromAndQ(fromId uuid.UUID, q int) error {
-	if fromId == uuid.Nil {
-		return fmt.Errorf("from can't be Nil")
-	}
+func (m *MessageServiceImpl) checkQ(q int) error {
 	if q > m.conf.MaxQuantity {
 		return fmt.Errorf("too big quantity")
 	}

@@ -2,7 +2,6 @@ package http
 
 import (
 	"MyMessenger/pkg/utils"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -20,22 +19,38 @@ func recv[T any](w http.ResponseWriter, r *http.Request) (*T, error) {
 	return toRecv, nil
 }
 
-func getUuidFromPath(req *http.Request) (uuid.UUID, error) {
-	UUID := req.PathValue("uuid")
+func getUuidFromPath(r *http.Request, key string) (uuid.UUID, error) {
+	UUID := r.PathValue(key)
 	if UUID == "" {
-		return uuid.Nil, errors.New("Empty UUID")
+		return uuid.Nil, fmt.Errorf("Empty %q UUID", key)
 	}
 	cUUID, err := uuid.Parse(UUID)
 	if err != nil {
-		return uuid.Nil, errors.New("Bad UUID")
+		return uuid.Nil, fmt.Errorf("Bad %q UUID", key)
 	}
 	return cUUID, nil
 }
 
-func getUUIDQueryParam(vals url.Values, key string) (uuid.UUID, error) {
+func getChatUuidFromPath(r *http.Request) (uuid.UUID, error) {
+	return getUuidFromPath(r, "chatid")
+}
+
+func getMsgUuidFromPath(r *http.Request) (uuid.UUID, error) {
+	return getUuidFromPath(r, "messageid")
+}
+
+func getQueryParam(vals url.Values, key string) (string, error) {
 	val := vals.Get(key)
 	if val == "" {
-		return uuid.Nil, fmt.Errorf("You must provide %q query param", key)
+		return val, fmt.Errorf("You must provide %q query param", key)
+	}
+	return val, nil
+}
+
+func getUUIDQueryParam(vals url.Values, key string) (uuid.UUID, error) {
+	val, err := getQueryParam(vals, key)
+	if err != nil {
+		return uuid.Nil, err
 	}
 
 	valConv, err := uuid.Parse(val)
@@ -47,9 +62,9 @@ func getUUIDQueryParam(vals url.Values, key string) (uuid.UUID, error) {
 }
 
 func getIntQueryParam(vals url.Values, key string) (int, error) {
-	val := vals.Get(key)
-	if val == "" {
-		return -1, fmt.Errorf("You must provide %q query param", key)
+	val, err := getQueryParam(vals, key)
+	if err != nil {
+		return -1, err
 	}
 
 	valConv, err := strconv.Atoi(val)

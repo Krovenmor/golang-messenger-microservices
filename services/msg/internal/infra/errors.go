@@ -13,6 +13,7 @@ var (
 	ErrChatNotFound        = errors.New("chat not found")
 	ErrUserNotFound        = errors.New("user not found")
 	ErrChatNotFoundOrEmpty = errors.New("chat not found or empty")
+	ErrNotFoundOrForbidden = errors.New("forbidden or not found")
 )
 
 func getErrorMsg(err error) error {

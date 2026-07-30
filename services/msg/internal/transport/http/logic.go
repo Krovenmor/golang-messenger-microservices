@@ -4,10 +4,13 @@ import (
 	"MyMessenger/pkg/utils"
 	"MyMessenger/services/msg/internal/service"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
 )
+
+const DEF_QUANTITY_QUERIES = 10
 
 func (h *Handler) NewProfile(w http.ResponseWriter, r *http.Request) {
 	profile, err := recv[ProfileBody](w, r)
@@ -93,7 +96,7 @@ func (h *Handler) NewChat(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) PostMessage(w http.ResponseWriter, r *http.Request) {
-	chatId, err := getUuidFromPath(r)
+	chatId, err := getChatUuidFromPath(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -144,7 +147,7 @@ func (h *Handler) GetProfileChatsExtended(w http.ResponseWriter, r *http.Request
 }
 
 func (h *Handler) GetChatInfo(w http.ResponseWriter, r *http.Request) {
-	chatId, err := getUuidFromPath(r)
+	chatId, err := getChatUuidFromPath(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -158,27 +161,18 @@ func (h *Handler) GetChatInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetChatMessages(w http.ResponseWriter, r *http.Request) {
-	chatId, err := getUuidFromPath(r)
+	chatId, err := getChatUuidFromPath(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	vals := r.URL.Query()
-	if len(vals) != 2 {
-		http.Error(w, "You must provide 'from' and 'q' query params", http.StatusBadRequest)
-		return
-	}
-
 	from, err := getUUIDQueryParam(vals, "from")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+
 	q, err := getIntQueryParam(vals, "q")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		q = DEF_QUANTITY_QUERIES
 	}
 
 	userId, err := utils.GetUuidFromContext(r)
@@ -194,4 +188,81 @@ func (h *Handler) GetChatMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.Send(w, &msgs)
+}
+
+func (h *Handler) GetMessage(w http.ResponseWriter, r *http.Request) {
+	chatId, err := getChatUuidFromPath(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	msgId, err := getMsgUuidFromPath(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	msg, err := h.msg.GetMessage(r.Context(), chatId, msgId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if msg == nil {
+		log.Printf("msg.GetMessage() returned nil msg")
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	utils.Send(w, msg)
+}
+
+func (h *Handler) ChangeMessage(w http.ResponseWriter, r *http.Request) {
+	chatId, err := getChatUuidFromPath(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	msgId, err := getMsgUuidFromPath(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	msg, err := recv[PostMessageIncomeBody](w, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	userId, err := utils.GetUuidFromContext(r)
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	err = h.msg.RedactMessage(r.Context(), chatId, msgId, userId, msg.Msg)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
+	chatId, err := getChatUuidFromPath(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	msgId, err := getMsgUuidFromPath(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	userId, err := utils.GetUuidFromContext(r)
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	err = h.msg.DelMessage(r.Context(), chatId, msgId, userId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }

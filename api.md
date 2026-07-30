@@ -36,6 +36,17 @@ Outcome:
 **All endpoints works only with JWT token from Auth API**  
 **Usage: Authorization -> Bearer Token -> Access token from AuthApi**  
 
+MessageOutcomeBody:  
+{  
+    "MessageId": "id UUIDv7",  
+    "SenderId": "User UUID",  
+    "Message": "Message text",  
+    "CreatedAt": "Time when it was added to server UTC, format RFC 3339, example: '2026-07-28T00:21:09.904497Z'",  
+    "IsRedacted": true/false  
+    "IsDeleted": true/false (if it's true message will be null)  
+    "RedactedAt": "time ..." (if it wasn't redacted (not deleted, not redacted) then null)  
+}
+
 - "POST /api/msg/profile/new" - creates a new profile  
 Income:  
 {  
@@ -80,10 +91,12 @@ Outcome:
         "ChatId": "UUID",
         "MessageId": "Last Message Id in chat, UUIDv7",
         "SenderId": "Who wrote that message, UUID",
+        "Name": "text ..."
         "Message": "text ...",
         "CreatedAt": "time UTC"
     }, ...
-]
+]  
+"Name", "Message", "CreatedAt" can be null  
 
 - "POST /api/msg/chat/new" - create a new chat  
 Income:  
@@ -95,7 +108,7 @@ Outcome:
     "ChatId": "Chat UUID"  
 }  
 
-- "POST /api/msg/chat/{uuid}" - post a message to a chat  
+- "POST /api/msg/chat/{ChatId}" - post a message to a chat  
 Income:  
 {  
     "Message": "Message text"  
@@ -105,21 +118,16 @@ Outcome:
     "MessageId": "MessageId UUIDv7"  
 }
 
-- "GET /api/msg/chat/{uuid}" - get chat history  
+- "GET /api/msg/chat/{ChatId}" - get chat history  
 Query params:  
-'from' - messageId from (UUIDv7)
-'q' - quantity (int)
+'from' - messageId from (UUIDv7) (if you don't provide 'from', you'll get last 'q' messages)
+'q' - quantity (int) (if you don't provide 'q', q will be default = 10)
 Outcome:  
 [  
-    {  
-    "MessageId": "id UUIDv7",  
-    "SenderId": "User UUID",  
-    "Message": "Message text",  
-    "CreatedAt": "Time when it was added to server UTC, format RFC 3339, example: '2026-07-28T00:21:09.904497Z'"  
-    }, ...  
+    MessageOutcomeBody, ...  
 ]  
 
-- "GET /api/msg/chat/{uuid}/info" - get chat info  
+- "GET /api/msg/chat/{ChatId}/info" - get chat info  
 Outcome:  
 {  
     "CreatedAt": "Time when it was created",
@@ -127,3 +135,15 @@ Outcome:
         {"UserId": "UUID", "JoinedAt": "Time"}, {...} ...
     ]
 }
+
+- "GET /api/msg/chat/{ChatId}/message/{MessageId}" - get message info  
+Outcome:  
+{ MessageOutcomeBody }  
+
+- "PUT /api/msg/chat/{ChatId}/message/{MessageId}" - change message text  
+Income:  
+{  
+    "Message": "Message text"  
+}
+
+- "DELETE /api/msg/chat/{ChatId}/message/{MessageId}" - delete message from chat  

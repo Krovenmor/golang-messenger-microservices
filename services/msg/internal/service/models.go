@@ -7,10 +7,13 @@ import (
 )
 
 type Message struct {
-	MessageId uuid.UUID
-	SenderId  uuid.UUID
-	Message   string
-	CreatedAt time.Time
+	MessageId  uuid.UUID
+	SenderId   uuid.UUID
+	Message    *string
+	CreatedAt  *time.Time
+	IsRedacted bool
+	IsDeleted  bool
+	RedactedAt *time.Time
 }
 
 type Profile struct {
@@ -37,6 +40,7 @@ type ChatFullInfo struct {
 	ChatId    uuid.UUID
 	MessageId uuid.UUID
 	SenderId  uuid.UUID
-	Message   string
-	CreatedAt time.Time
+	Name      *string
+	Message   *string
+	CreatedAt *time.Time
 }

@@ -40,6 +40,6 @@ func ToPublicProfileBody(p *service.Profile) *ProfilePublicBody {
 func ToServiceMsg(m *PostMessageIncomeBody, userId uuid.UUID) *service.Message {
 	return &service.Message{
 		SenderId: userId,
-		Message:  m.Msg,
+		Message:  &m.Msg,
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"MyMessenger/services/msg/internal/infra/queries"
 	"MyMessenger/services/msg/internal/service"
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -57,13 +58,47 @@ func (r *PostagreRepo) NewChat(ctx context.Context, chatId, fUser, sUser uuid.UU
 	return nil
 }
 
-func (r *PostagreRepo) PostMessage(ctx context.Context, chatId uuid.UUID, msg *service.Message) error {
+func (r *PostagreRepo) NewMessage(ctx context.Context, chatId uuid.UUID, msg *service.Message) error {
 	t, err := r.pool.Exec(ctx, r.q.PostMessage, msg.MessageId, chatId, msg.SenderId, msg.Message)
 	if err != nil {
 		return getErrorMsg(err)
 	}
 	if t.RowsAffected() == 0 {
 		return ErrAlreadyExists
+	}
+	return nil
+}
+
+func (r *PostagreRepo) GetMessage(ctx context.Context, chatId, msgId uuid.UUID) (*service.Message, error) {
+	var msg service.Message
+	err := r.pool.QueryRow(ctx, r.q.GetMessage, chatId, msgId).Scan(
+		&msg.MessageId, &msg.SenderId, &msg.Message, &msg.CreatedAt,
+		&msg.IsRedacted, &msg.IsDeleted, &msg.RedactedAt,
+	)
+	if err != nil {
+		return nil, getErrorMsg(err)
+	}
+	return &msg, nil
+}
+
+func (r *PostagreRepo) RedactMessage(ctx context.Context, chatId, msgId, userId uuid.UUID, newText string) error {
+	t, err := r.pool.Exec(ctx, r.q.UpdateMessage, chatId, msgId, userId, newText)
+	if err != nil {
+		return getErrorMsg(err)
+	}
+	if t.RowsAffected() == 0 {
+		return ErrNotFoundOrForbidden
+	}
+	return nil
+}
+
+func (r *PostagreRepo) DelMessage(ctx context.Context, chatId, msgId, userId uuid.UUID) error {
+	t, err := r.pool.Exec(ctx, r.q.DeleteMessage, chatId, msgId, userId)
+	if err != nil {
+		return getErrorMsg(err)
+	}
+	if t.RowsAffected() == 0 {
+		return ErrNotFoundOrForbidden
 	}
 	return nil
 }
@@ -123,6 +158,9 @@ func (r *PostagreRepo) GetChatInfo(ctx context.Context, chatId uuid.UUID) (*serv
 func (r *PostagreRepo) GetChatHistory(ctx context.Context, chatId uuid.UUID, fromId uuid.UUID, q int) ([]service.Message, error) {
 	messages, err := repo.GetSliceQueryByPos[service.Message](ctx, r.pool, r.q.GetChatHistory, chatId, fromId, q)
 	if err != nil {
+		if errors.Is(err, repo.ErrNotFound) {
+			return []service.Message{}, nil
+		}
 		return messages, getErrorMsg(err)
 	}
 	return messages, nil

@@ -44,6 +44,10 @@ func (m *MessageServiceImpl) GetProfileByUserName(ctx context.Context, username 
 	return m.repo.GetProfileByUserName(ctx, username)
 }
 
+func (m *MessageServiceImpl) IsProfileInChat(ctx context.Context, userId, chatId uuid.UUID) error {
+	return m.repo.IsProfileInChat(ctx, userId, chatId)
+}
+
 func (m *MessageServiceImpl) CreateNewChat(ctx context.Context, fUser, sUser uuid.UUID) (uuid.UUID, error) {
 	if fUser == sUser {
 		return uuid.Nil, fmt.Errorf("Can't create chat with fUUID == sUUID")
@@ -61,12 +65,30 @@ func (m *MessageServiceImpl) CreateNewChat(ctx context.Context, fUser, sUser uui
 }
 
 func (m *MessageServiceImpl) PostMessage(ctx context.Context, chatId uuid.UUID, msg Message) (uuid.UUID, error) {
+	if err := m.checkMessage(&msg); err != nil {
+		return uuid.Nil, err
+	}
 	msgId, err := uuid.NewV7()
 	if err != nil {
 		return msgId, fmt.Errorf("Trouble with gen UUID for new message: %w", err)
 	}
 	msg.MessageId = msgId
-	return msgId, m.repo.PostMessage(ctx, chatId, &msg)
+	return msgId, m.repo.NewMessage(ctx, chatId, &msg)
+}
+
+func (m *MessageServiceImpl) GetMessage(ctx context.Context, chatId, msgId uuid.UUID) (*Message, error) {
+	return m.repo.GetMessage(ctx, chatId, msgId)
+}
+
+func (m *MessageServiceImpl) RedactMessage(ctx context.Context, chatId, msgId, userId uuid.UUID, newText string) error {
+	if err := m.checkMessageText(newText); err != nil {
+		return err
+	}
+	return m.repo.RedactMessage(ctx, chatId, msgId, userId, newText)
+}
+
+func (m *MessageServiceImpl) DelMessage(ctx context.Context, chatId, msgId, userId uuid.UUID) error {
+	return m.repo.DelMessage(ctx, chatId, msgId, userId)
 }
 
 func (m *MessageServiceImpl) GetChats(ctx context.Context, userId uuid.UUID) ([]uuid.UUID, error) {
@@ -82,13 +104,9 @@ func (m *MessageServiceImpl) GetChatInfo(ctx context.Context, chatId uuid.UUID) 
 }
 
 func (m *MessageServiceImpl) GetChatHistory(ctx context.Context, chatId uuid.UUID, fromUserId, fromMsgId uuid.UUID, q int) ([]Message, error) {
-	err := m.checkFromAndQ(fromMsgId, q)
+	err := m.checkQ(q)
 	if err != nil {
 		return []Message{}, err
-	}
-	err = m.repo.IsProfileInChat(ctx, fromUserId, chatId)
-	if err != nil {
-		return []Message{}, fmt.Errorf("Can't access other chats")
 	}
 	return m.repo.GetChatHistory(ctx, chatId, fromMsgId, q)
 }
