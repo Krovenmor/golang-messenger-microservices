@@ -8,14 +8,21 @@ import (
 	"strings"
 )
 
+type ExtCheckFunc func(w http.ResponseWriter, r *http.Request, c *TokenClaims) error
+
 type Authenticator struct {
-	checker JWTChecker
+	checker  JWTChecker
+	extCheck ExtCheckFunc
 }
 
 func NewAuthenticator(checker *JWTChecker) *Authenticator {
 	return &Authenticator{
 		checker: *checker,
 	}
+}
+
+func (a *Authenticator) SetExternalCheckFunc(extChecker ExtCheckFunc) {
+	a.extCheck = extChecker
 }
 
 type contextKey string
@@ -46,6 +53,13 @@ func (a *Authenticator) Middleware(h http.Handler) http.Handler {
 			log.Printf("False token")
 			http.Error(w, fmt.Sprintf("Trouble with token, err: %q", err), http.StatusUnauthorized)
 			return
+		}
+
+		if a.extCheck != nil {
+			err = a.extCheck(w, r, claims)
+			if err != nil {
+				return
+			}
 		}
 
 		ctx := context.WithValue(r.Context(), UserIdKey, claims.Subject)
