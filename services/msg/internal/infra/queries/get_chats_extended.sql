@@ -1,22 +1,25 @@
 with chats as (
     select distinct
-        chatid
+        chat_id
     from chatmembers
-    where userid = $1
+    where user_id = $1
 ),
 lastMessage as (
-    select distinct on (chatid)
-        chatid,
-        senderid,
+    select distinct on (chat_id)
+        chat_id,
+        sender_id,
         message,
-        messageid,
-        createdat
+        message_id,
+        created_at
     from messages
-    where chatid in (select chatid from chats)
-    order by chatid, messageid desc
+    where chat_id in (select chat_id from chats)
+    order by chat_id, message_id desc
 )
 select
-    c.chatid, lm.messageid, lm.senderid, lm.message, lm.createdat
+    c.chat_id, lm.message_id,
+    lm.sender_id, p.name,
+    lm.message, lm.created_at
 from chats c
-left join lastMessage lm on lm.chatid = c.chatid
-order by lm.createdat desc nulls first;
+left join lastMessage lm on lm.chat_id = c.chat_id
+left join profiles p on p.user_id = lm.sender_id
+order by lm.created_at desc nulls first;

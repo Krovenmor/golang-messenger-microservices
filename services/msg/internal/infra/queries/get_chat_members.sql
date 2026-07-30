@@ -1,5 +1,5 @@
 select
-    userid,
-    joinedat
+    user_id,
+    joined_at
 from chatmembers
-where chatid = $1;
+where chat_id = $1;

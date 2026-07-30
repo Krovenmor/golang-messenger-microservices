@@ -3,7 +3,7 @@ WITH new_chat AS (
     VALUES ($1)
     RETURNING id
 )
-INSERT INTO chatmembers (chatid, userid)
+INSERT INTO chatmembers (chat_id, user_id)
 VALUES
     ($1, $2),
     ($1, $3);

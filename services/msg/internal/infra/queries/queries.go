@@ -16,19 +16,22 @@ func getQuery(queryName string) (string, error) {
 }
 
 type Queries struct {
-	GetChatHistory     string
 	GetProfileId       string
-	NewChat            string
 	NewProfile         string
-	PostMessage        string
 	IsProfileInChat    string
 	GetProfileUserName string
 
+	PostMessage   string
+	GetMessage    string
+	UpdateMessage string
+	DeleteMessage string
+
+	NewChat          string
 	GetChats         string
 	GetChatsExtended string
-
-	GetChatInfo    string
-	GetChatMembers string
+	GetChatHistory   string
+	GetChatInfo      string
+	GetChatMembers   string
 
 	GetPrivateChatBetweenTwoPeoples string
 }
@@ -58,6 +61,9 @@ func GetQueries() (*Queries, error) {
 		GetChatMembers:                  get("get_chat_members"),
 		GetPrivateChatBetweenTwoPeoples: get("is_profiles_in_1by1_chat"),
 		GetChatsExtended:                get("get_chats_extended"),
+		GetMessage:                      get("get_message"),
+		UpdateMessage:                   get("update_message"),
+		DeleteMessage:                   get("delete_message"),
 	}
 
 	if err != nil {

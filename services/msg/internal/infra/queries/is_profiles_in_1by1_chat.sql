@@ -1,5 +1,5 @@
-select chatid
+select chat_id
 from chatmembers
-where userid in ($1, $2)
-group by chatid
-having count(distinct userid) = 2;
+where user_id in ($1, $2)
+group by chat_id
+having count(distinct user_id) = 2;

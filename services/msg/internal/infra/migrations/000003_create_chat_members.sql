@@ -1,10 +1,10 @@
 -- +goose Up
 create table if not exists ChatMembers (
-    chatId uuid references chats(id) on delete cascade,
-    userId uuid references profiles(userid) on delete cascade,
-    joinedAt timestamp default now(),
+    chat_id uuid references chats(id) on delete cascade,
+    user_id uuid references profiles(user_id) on delete cascade,
+    joined_at timestamp default now(),
 
-    primary key (chatId, userId)
+    primary key (chat_id, user_id)
 );
 
 -- +goose Down

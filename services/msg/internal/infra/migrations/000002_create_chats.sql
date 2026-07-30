@@ -1,7 +1,7 @@
 -- +goose Up
 create table if not exists Chats(
     id uuid primary key,
-    createdAt timestamp default now()
+    created_at timestamp default now()
 );
 
 -- +goose Down

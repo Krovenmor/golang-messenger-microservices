@@ -1,13 +1,16 @@
 -- +goose Up
 create table if not exists Messages(
-    messageId uuid not null,
-    chatId uuid references chats(id) on delete cascade,
-    senderId uuid references profiles(userid) on delete cascade,
+    message_id uuid primary key,
+    chat_id uuid references chats(id) on delete cascade,
+    sender_id uuid references profiles(user_id) on delete cascade,
     message text not null,
-    createdAt timestamp default now(),
+    created_at timestamptz default now(),
 
-    primary key (MessageId, chatid),
-    foreign key (chatId, senderId) references chatmembers(chatId, userid)
+    is_redacted boolean default false,
+    is_deleted boolean default false,
+    redacted_at timestamptz default null,
+
+    foreign key (chat_id, sender_id) references chatmembers(chat_id, user_id)
 );
 
 -- +goose Down

@@ -1,5 +1,6 @@
-select messageid, senderid, message, createdat
+select message_id, sender_id, message, created_at,
+    is_redacted, is_deleted, redacted_at
 from messages
-where chatid = $1 and messageid >= $2
-order by messageid
+where chat_id = $1 and message_id > $2
+order by message_id
 limit $3;

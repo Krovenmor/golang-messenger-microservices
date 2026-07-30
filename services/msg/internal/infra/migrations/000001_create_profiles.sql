@@ -1,12 +1,12 @@
 -- +goose Up
 create table if not exists Profiles(
-    userId uuid primary key,
-    username text unique not null,
+    user_id uuid primary key,
+    user_name text unique not null,
     name text not null,
-    pubKey text not null,
-    prvKey text not null,
-    kdfSalt text not null,
-    createdAt timestamp default now()
+    pub_key text not null,
+    prv_key text not null,
+    kdf_salt text not null,
+    created_at timestamp default now()
 );
 
 -- +goose Down
