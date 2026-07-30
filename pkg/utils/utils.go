@@ -4,6 +4,7 @@ import (
 	"MyMessenger/pkg/jwt"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
@@ -15,7 +16,8 @@ func Send[T any](w http.ResponseWriter, toSend *T) {
 	w.WriteHeader(http.StatusOK)
 	err := json.NewEncoder(w).Encode(toSend)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Send: trouble with encoding, err: %q", err)
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 	}
 }
 
@@ -24,7 +26,8 @@ func SendWithStatus[T any](w http.ResponseWriter, toSend *T, status int) {
 	w.WriteHeader(status)
 	err := json.NewEncoder(w).Encode(toSend)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("SendWithStatus: trouble with encoding, err: %q", err)
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 	}
 }
 
@@ -49,7 +52,9 @@ func GetUuidFromContext(r *http.Request) (uuid.UUID, error) {
 	sUserId := r.Context().Value(jwt.UserIdKey).(string)
 	uUserId, err := uuid.Parse(sUserId)
 	if err != nil {
-		return uUserId, fmt.Errorf("GetUuidFromContext(): trouble with parsing uuid: %w", err)
+		err := fmt.Errorf("GetUuidFromContext(): trouble with parsing uuid: %w", err)
+		log.Print(err.Error())
+		return uUserId, err
 	}
 	return uUserId, nil
 }
