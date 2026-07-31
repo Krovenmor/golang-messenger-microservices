@@ -32,11 +32,11 @@ func getUuidFromPath(r *http.Request, key string) (uuid.UUID, error) {
 }
 
 func getChatUuidFromPath(r *http.Request) (uuid.UUID, error) {
-	return getUuidFromPath(r, "chatid")
+	return getUuidFromPath(r, chatIdKey)
 }
 
 func getMsgUuidFromPath(r *http.Request) (uuid.UUID, error) {
-	return getUuidFromPath(r, "messageid")
+	return getUuidFromPath(r, messageIdKey)
 }
 
 func getQueryParam(vals url.Values, key string) (string, error) {

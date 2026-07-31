@@ -10,6 +10,10 @@ import (
 	"github.com/google/uuid"
 )
 
+var chatIdKey = "chatid"
+var messageIdKey = "messageid"
+var targetKey = "target"
+
 type Handler struct {
 	msg  service.MessageService
 	auth *jwt.Authenticator
@@ -17,13 +21,13 @@ type Handler struct {
 
 func NewHandler(msgService service.MessageService, auth *jwt.Authenticator) *Handler {
 	auth.SetExternalCheckFunc(func(w http.ResponseWriter, r *http.Request, c *jwt.TokenClaims) error {
-		chatUUID := r.PathValue("chatuuid")
+		chatUUID := r.PathValue(chatIdKey)
 		if chatUUID == "" {
 			return nil
 		}
 		chatId, err := uuid.Parse(chatUUID)
 		if err != nil {
-			err := fmt.Errorf("invalid chat_id UUID: %v", err)
+			err := fmt.Errorf("invalid chatId UUID: %v", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return err
 		}
@@ -50,18 +54,18 @@ func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {
 
 	protected("POST /api/msg/profile/new", h.NewProfile)
 	protected("GET /api/msg/profile", h.GetProfilePrivate)
-	protected("GET /api/msg/profile/{target}", h.GetProfilePublic)
+	protected(fmt.Sprintf("GET /api/msg/profile/{%s}", targetKey), h.GetProfilePublic)
 	protected("GET /api/msg/profile/chats", h.GetProfileChats)
 	protected("GET /api/msg/profile/chats/full", h.GetProfileChatsExtended)
 
 	protected("POST /api/msg/chat/new", h.NewChat)
-	protected("POST /api/msg/chat/{chatid}", h.PostMessage)
-	protected("GET /api/msg/chat/{chatid}", h.GetChatMessages)
-	protected("GET /api/msg/chat/{chatid}/info", h.GetChatInfo)
+	protected(fmt.Sprintf("POST /api/msg/chat/{%s}", chatIdKey), h.PostMessage)
+	protected(fmt.Sprintf("GET /api/msg/chat/{%s}", chatIdKey), h.GetChatMessages)
+	protected(fmt.Sprintf("GET /api/msg/chat/{%s}/info", chatIdKey), h.GetChatInfo)
 
-	protected("GET /api/msg/chat/{chatid}/message/{messageid}", h.GetMessage)
-	protected("PUT /api/msg/chat/{chatid}/message/{messageid}", h.ChangeMessage)
-	protected("DELETE /api/msg/chat/{chatid}/message/{messageid}", h.DeleteMessage)
+	protected(fmt.Sprintf("GET /api/msg/chat/{%s}/message/{%s}", chatIdKey, messageIdKey), h.GetMessage)
+	protected(fmt.Sprintf("PUT /api/msg/chat/{%s}/message/{%s}", chatIdKey, messageIdKey), h.ChangeMessage)
+	protected(fmt.Sprintf("DELETE /api/msg/chat/{%s}/message/{%s}", chatIdKey, messageIdKey), h.DeleteMessage)
 
 	return m
 }

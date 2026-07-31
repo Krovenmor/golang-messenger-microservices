@@ -4,6 +4,7 @@ import (
 	"MyMessenger/pkg/utils"
 	"MyMessenger/services/msg/internal/service"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -50,9 +51,9 @@ func (h *Handler) GetProfilePrivate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetProfilePublic(w http.ResponseWriter, r *http.Request) {
-	userName := r.PathValue("target")
+	userName := r.PathValue(targetKey)
 	if userName == "" {
-		http.Error(w, "You must provide target", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("You must provide %q", targetKey), http.StatusBadRequest)
 		return
 	}
 	var profile *service.Profile
@@ -169,6 +170,9 @@ func (h *Handler) GetChatMessages(w http.ResponseWriter, r *http.Request) {
 
 	vals := r.URL.Query()
 	from, err := getUUIDQueryParam(vals, "from")
+	if err != nil {
+		from = uuid.Max
+	}
 
 	q, err := getIntQueryParam(vals, "q")
 	if err != nil {

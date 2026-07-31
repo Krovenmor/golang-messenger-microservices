@@ -167,11 +167,12 @@ func (r *PostagreRepo) GetChatHistory(ctx context.Context, chatId uuid.UUID, fro
 }
 
 func (r *PostagreRepo) IsProfileInChat(ctx context.Context, userId, chatId uuid.UUID) error {
-	t, err := r.pool.Exec(ctx, r.q.IsProfileInChat, chatId, userId)
+	var isInChat int
+	err := r.pool.QueryRow(ctx, r.q.IsProfileInChat, chatId, userId).Scan(&isInChat)
 	if err != nil {
 		return getErrorMsg(err)
 	}
-	if t.RowsAffected() == 0 {
+	if isInChat != 1 {
 		return ErrNotFound
 	}
 	return nil
