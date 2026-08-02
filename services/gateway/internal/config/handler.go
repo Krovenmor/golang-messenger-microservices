@@ -6,6 +6,7 @@ type MainHandlerConfig struct {
 	AuthServiceURL string
 	MsgServiceURL  string
 	WsServiceURL   string
+	WebServiceURL  string
 }
 
 func GetMainHandlerConfig() (*MainHandlerConfig, error) {
@@ -27,6 +28,7 @@ func GetMainHandlerConfig() (*MainHandlerConfig, error) {
 		AuthServiceURL: get("AUTH_URL"),
 		MsgServiceURL:  get("MSG_URL"),
 		WsServiceURL:   get("WS_URL"),
+		WebServiceURL:  get("WEB_URL"),
 	}
 
 	if err != nil {
