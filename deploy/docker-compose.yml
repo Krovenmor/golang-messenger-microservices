@@ -111,6 +111,14 @@ services:
     volumes:
       - ../certs/jwt/public.key:/app/certs/jwt/public.key:ro
 
+  web-service:
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+    volumes:
+      - ../web:/usr/share/nginx/html
+    restart: always
+
   gateway-service:
     build: 
       context: ..
@@ -123,6 +131,7 @@ services:
       - AUTH_URL=http://auth-service:8081
       - MSG_URL=http://msg-service:8082
       - WS_URL=http://ws-service:8083
+      - WEB_URL=http://web-service:80
 
 volumes:
   auth_db_data:
