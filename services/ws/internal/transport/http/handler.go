@@ -45,6 +45,6 @@ func (h *MainHandler) HandleWS(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MainHandler) RegisterRoutes(m *http.ServeMux) (http.Handler, error) {
-	m.HandleFunc("/api/ws/", h.HandleWS)
+	m.HandleFunc("/api/ws", h.HandleWS)
 	return m, nil
 }
