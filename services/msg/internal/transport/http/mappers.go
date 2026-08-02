@@ -19,6 +19,7 @@ func ToServiceProfile(p *ProfileBody, userId uuid.UUID) *service.Profile {
 
 func FromServiceProfile(p *service.Profile) *ProfileBody {
 	return &ProfileBody{
+		UserId:     p.UserId,
 		Name:       p.Name,
 		UserName:   p.UserName,
 		PublicKey:  p.PublicKey,
@@ -34,6 +35,7 @@ func ToPublicProfileBody(p *service.Profile) *ProfilePublicBody {
 		Name:      p.Name,
 		UserName:  p.UserName,
 		PublicKey: p.PublicKey,
+		CreatedAt: p.CreatedAt,
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 )
 
 type ProfileBody struct {
+	UserId     uuid.UUID `json:"UserId"`
 	Name       string    `json:"Name" validate:"required"`
 	UserName   string    `json:"UserName" validate:"required"`
 	PublicKey  string    `json:"PubKey" validate:"required"`
@@ -20,6 +21,7 @@ type ProfilePublicBody struct {
 	Name      string    `json:"Name"`
 	UserName  string    `json:"UserName"`
 	PublicKey string    `json:"PubKey"`
+	CreatedAt time.Time `json:"CreatedAt"`
 }
 
 type NewChatIncomeBody struct {
