@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type TokenType string
@@ -67,4 +68,15 @@ func (j *JWTChecker) IsValidAccess(aToken string) (*TokenClaims, error) {
 		return nil, fmt.Errorf("It's not an Access Token!")
 	}
 	return claims, nil
+}
+
+func (j *JWTChecker) GetUserIdFromClaims(claims *TokenClaims) (uuid.UUID, error) {
+	if claims == nil {
+		return uuid.Nil, fmt.Errorf("claims == nil")
+	}
+	id, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return id, nil
 }
