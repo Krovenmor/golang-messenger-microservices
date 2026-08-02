@@ -1,12 +1,23 @@
 services:
+
+  redis-db:
+    image: redis:latest
+    container_name: msg_redis
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
   auth-db:
     image: postgres:latest
     environment:
       - POSTGRES_DB=auth_db
       - POSTGRES_USER=auth_user
       - POSTGRES_PASSWORD=auth_pass
-    ports:
-      - "5431:5432"
     volumes:
       - auth_db_data:/var/lib/data
     healthcheck:
@@ -19,8 +30,6 @@ services:
     build:
       context: ..
       dockerfile: services/auth/Dockerfile
-    ports:
-      - "8081:8081"
     environment:
       - JWT_PRVKEY_PATH=/app/certs/jwt/private.key
       - JWT_PUBKEY_PATH=/app/certs/jwt/public.key
@@ -45,8 +54,6 @@ services:
       - POSTGRES_DB=msg_db
       - POSTGRES_USER=msg_user
       - POSTGRES_PASSWORD=msg_pass
-    ports:
-      - "5430:5432"
     volumes:
       - msg_db_data:/var/lib/data
     healthcheck:
@@ -59,13 +66,14 @@ services:
     build:
       context: ..
       dockerfile: services/msg/Dockerfile
-    ports:
-      - "8082:8082"
     environment:
       - JWT_PUBKEY_PATH=/app/certs/jwt/public.key
       - DB_CONN_STRING=postgres://msg_user:msg_pass@msg-db:5432/msg_db
       - LISTEN_ADDRESS=0.0.0.0
       - LISTEN_PORT=8082
+      - REDIS_ADDRESS=redis-db:6379
+      - REDIS_PASSWORD=""
+      - REDIS_DB=0
       - MIN_NAME_LEN=5
       - MAX_NAME_LEN=50
       - MIN_USERNAME_LEN=5
@@ -81,9 +89,42 @@ services:
     depends_on:
       msg-db:
         condition: service_healthy
+      redis-db:
+        condition: service_healthy
     volumes:
       - ../certs/jwt/public.key:/app/certs/jwt/public.key:ro
+    
+  ws-service:
+    build: 
+      context: ..
+      dockerfile: services/ws/Dockerfile
+    environment:
+      - JWT_PUBKEY_PATH=/app/certs/jwt/public.key
+      - LISTEN_ADDRESS=0.0.0.0
+      - LISTEN_PORT=8083
+      - REDIS_ADDRESS=redis-db:6379
+      - REDIS_PASSWORD=""
+      - REDIS_DB=0
+    depends_on:
+      redis-db:
+        condition: service_healthy
+    volumes:
+      - ../certs/jwt/public.key:/app/certs/jwt/public.key:ro
+
+  gateway-service:
+    build: 
+      context: ..
+      dockerfile: services/gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - LISTEN_ADDRESS=0.0.0.0
+      - LISTEN_PORT=8080
+      - AUTH_URL=http://auth-service:8081
+      - MSG_URL=http://msg-service:8082
+      - WS_URL=http://ws-service:8083
 
 volumes:
   auth_db_data:
   msg_db_data:
+  redis_data:
