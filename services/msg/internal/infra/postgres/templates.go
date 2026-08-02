@@ -1,4 +1,4 @@
-package infra
+package postgres
 
 import (
 	"MyMessenger/services/msg/internal/service"

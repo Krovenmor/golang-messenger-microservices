@@ -4,6 +4,7 @@ import (
 	"MyMessenger/services/msg/internal/config"
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 )
@@ -14,13 +15,15 @@ var (
 
 type MessageServiceImpl struct {
 	repo MessageRepo
+	pub  EventPublisher
 	conf *config.MessageConfig
 }
 
-func NewMessageServiceImpl(repo MessageRepo, conf *config.MessageConfig) *MessageServiceImpl {
+func NewMessageServiceImpl(repo MessageRepo, pub EventPublisher, conf *config.MessageConfig) *MessageServiceImpl {
 	return &MessageServiceImpl{
 		repo: repo,
 		conf: conf,
+		pub:  pub,
 	}
 }
 
@@ -61,6 +64,7 @@ func (m *MessageServiceImpl) CreateNewChat(ctx context.Context, fUser, sUser uui
 	if err != nil {
 		return uuid.Nil, err
 	}
+	m.pub.PublishNewChat(ctx, nChatId, []uuid.UUID{sUser})
 	return nChatId, nil
 }
 
@@ -70,10 +74,20 @@ func (m *MessageServiceImpl) PostMessage(ctx context.Context, chatId uuid.UUID, 
 	}
 	msgId, err := uuid.NewV7()
 	if err != nil {
-		return msgId, fmt.Errorf("Trouble with gen UUID for new message: %w", err)
+		return uuid.Nil, fmt.Errorf("Trouble with gen UUID for new message: %w", err)
 	}
 	msg.MessageId = msgId
-	return msgId, m.repo.NewMessage(ctx, chatId, &msg)
+	err = m.repo.NewMessage(ctx, chatId, &msg)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	membersToNotify, err := m.repo.GetChatMembersIdsExcept(ctx, chatId, msg.SenderId)
+	if err == nil {
+		m.pub.PublishNewMessage(ctx, chatId, msgId, membersToNotify)
+	} else {
+		log.Printf("PostMessage(): Trouble with GetChatMembersIdsExcept(), err: %q", err.Error())
+	}
+	return msgId, nil
 }
 
 func (m *MessageServiceImpl) GetMessage(ctx context.Context, chatId, msgId uuid.UUID) (*Message, error) {
@@ -84,11 +98,31 @@ func (m *MessageServiceImpl) RedactMessage(ctx context.Context, chatId, msgId, u
 	if err := m.checkMessageText(newText); err != nil {
 		return err
 	}
-	return m.repo.RedactMessage(ctx, chatId, msgId, userId, newText)
+	err := m.repo.RedactMessage(ctx, chatId, msgId, userId, newText)
+	if err != nil {
+		return err
+	}
+	membersToNotify, err := m.repo.GetChatMembersIdsExcept(ctx, chatId, userId)
+	if err == nil {
+		m.pub.PublishMessageWasRedacted(ctx, chatId, msgId, membersToNotify)
+	} else {
+		log.Printf("RedactMessage(): Trouble with GetChatMembersIdsExcept(), err: %q", err.Error())
+	}
+	return nil
 }
 
 func (m *MessageServiceImpl) DelMessage(ctx context.Context, chatId, msgId, userId uuid.UUID) error {
-	return m.repo.DelMessage(ctx, chatId, msgId, userId)
+	err := m.repo.DelMessage(ctx, chatId, msgId, userId)
+	if err != nil {
+		return err
+	}
+	membersToNotify, err := m.repo.GetChatMembersIdsExcept(ctx, chatId, userId)
+	if err == nil {
+		m.pub.PublishMessageWasDeleted(ctx, chatId, msgId, membersToNotify)
+	} else {
+		log.Printf("DelMessage(): Trouble with GetChatMembersIdsExcept(), err: %q", err.Error())
+	}
+	return nil
 }
 
 func (m *MessageServiceImpl) GetChats(ctx context.Context, userId uuid.UUID) ([]uuid.UUID, error) {

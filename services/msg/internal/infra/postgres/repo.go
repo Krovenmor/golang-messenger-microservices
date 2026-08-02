@@ -1,8 +1,8 @@
-package infra
+package postgres
 
 import (
 	"MyMessenger/pkg/repo"
-	"MyMessenger/services/msg/internal/infra/queries"
+	"MyMessenger/services/msg/internal/infra/postgres/queries"
 	"MyMessenger/services/msg/internal/service"
 	"context"
 	"errors"
@@ -138,6 +138,18 @@ func (r *PostagreRepo) GetChatMembers(ctx context.Context, chatId uuid.UUID) ([]
 		return members, getErrorMsg(err)
 	}
 	return members, nil
+}
+
+func (r *PostagreRepo) GetChatMembersIdsExcept(ctx context.Context, chatId, exceptUserId uuid.UUID) ([]uuid.UUID, error) {
+	collect := func(row pgx.CollectableRow) (uuid.UUID, error) {
+		var id uuid.UUID
+		return id, row.Scan(&id)
+	}
+	ids, err := repo.GetSliceQueryByFunc(ctx, r.pool, r.q.GetChatMembersIdsExcept, collect, chatId, exceptUserId)
+	if err != nil {
+		return ids, getErrorMsg(err)
+	}
+	return ids, nil
 }
 
 func (r *PostagreRepo) GetChatInfo(ctx context.Context, chatId uuid.UUID) (*service.ChatInfo, error) {

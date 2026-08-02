@@ -5,8 +5,9 @@ import (
 	"MyMessenger/pkg/di"
 	"MyMessenger/pkg/repo"
 	"MyMessenger/services/msg/internal/config"
-	"MyMessenger/services/msg/internal/infra"
-	"MyMessenger/services/msg/internal/infra/migrations"
+	"MyMessenger/services/msg/internal/infra/postgres"
+	"MyMessenger/services/msg/internal/infra/postgres/migrations"
+	"MyMessenger/services/msg/internal/infra/redis"
 	"MyMessenger/services/msg/internal/service"
 	web "MyMessenger/services/msg/internal/transport/http"
 
@@ -24,6 +25,7 @@ func GetModule() fx.Option {
 		fx.Provide(
 			stdconfig.GetRepoConfig,
 			stdconfig.GetServConfig,
+			stdconfig.GetRedisConfig,
 			config.GetMessageConfig,
 		),
 
@@ -40,8 +42,16 @@ func GetModule() fx.Option {
 		// Repo Service
 		fx.Provide(
 			fx.Annotate(
-				infra.NewRepo,
+				postgres.NewRepo,
 				fx.As(new(service.MessageRepo)),
+			),
+		),
+
+		// Msg Broker
+		fx.Provide(
+			fx.Annotate(
+				redis.NewRedisPublisher,
+				fx.As(new(service.EventPublisher)),
 			),
 		),
 
