@@ -49,13 +49,13 @@ func (h *WSHandler) HandleConnection(w http.ResponseWriter, r *http.Request, use
 		for {
 			_, _, err := conn.Read(ctx)
 			if err != nil {
-				log.Printf("conn.Read() err: %q", err.Error())
+				log.Printf("conn.Read(), UserID: %s, err: %v", userId.String(), err)
 				return
 			}
 		}
 	}()
 
-	ticker := time.NewTicker(time.Second * 5)
+	ticker := time.NewTicker(time.Second * 10)
 	defer ticker.Stop()
 
 	for {
@@ -83,7 +83,6 @@ func (h *WSHandler) HandleConnection(w http.ResponseWriter, r *http.Request, use
 			}
 
 		case <-ticker.C:
-			log.Printf("New tick")
 			ctxWithTime, cancelCTX := context.WithTimeout(ctx, time.Second*3)
 			err := conn.Ping(ctxWithTime)
 			cancelCTX()
