@@ -30,11 +30,17 @@ func (m *MessageServiceImpl) checkProfileUserName(username string) error {
 
 func (m *MessageServiceImpl) checkProfileKeys(p *Profile) error {
 	lPub, lPrv := len(p.PublicKey), len(p.PrivateKey)
-	if lPub < m.conf.MinKeysLen || lPrv < m.conf.MinKeysLen {
-		return fmt.Errorf("Keys are too short")
+	if lPub < m.conf.MinKeysLen {
+		return fmt.Errorf("PubKey is too short, min=%d, got=%d", m.conf.MinKeysLen, lPub)
 	}
-	if lPub > m.conf.MaxPubKeyLen || lPrv > m.conf.MaxPrvKeyLen {
-		return fmt.Errorf("Keys are too big")
+	if lPrv < m.conf.MinKeysLen {
+		return fmt.Errorf("PrvKey is too short, min=%d, got=%d", m.conf.MinKeysLen, lPrv)
+	}
+	if lPub > m.conf.MaxPubKeyLen {
+		return fmt.Errorf("PubKey are too big, max=%d, got=%d", m.conf.MaxPubKeyLen, lPub)
+	}
+	if lPrv > m.conf.MaxPrvKeyLen {
+		return fmt.Errorf("PrvKey are too big, max=%d, got=%d", m.conf.MaxPrvKeyLen, lPrv)
 	}
 	return nil
 }
