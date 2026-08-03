@@ -112,15 +112,17 @@ Outcome:
 [
     {
         "ChatId": "UUID",
-        "MessageId": "Last Message Id in chat, UUIDv7",
-        "SenderId": "ID who wrote last message, UUID",
-        "Name": "Sender name, who wrote last message",
-        "Message": "text ...",
-        "CreatedAt": "time UTC"
+        "Members": [
+            {
+                "UserId": "UUID", 
+                "Name": "Name",
+                "JoinedAt": "Time"
+            }, ...
+        ]
+        "LastMessage": MessageOutcomeBody (can be null)
     }, ...
 ]  
-```
-"Name", "Message", "CreatedAt" can be null  
+```  
 
 - **"POST /api/msg/chat/new"** - create a new chat  
 Income:  

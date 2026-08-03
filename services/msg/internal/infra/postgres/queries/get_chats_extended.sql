@@ -1,4 +1,4 @@
-with chats as (
+with chats_ids as (
     select distinct
         chat_id
     from chatmembers
@@ -7,19 +7,44 @@ with chats as (
 lastMessage as (
     select distinct on (chat_id)
         chat_id,
-        sender_id,
-        message,
-        message_id,
-        created_at
+        created_at,
+        json_build_object(
+            'MessageId', message_id,
+            'SenderId', sender_id,
+            'Message', message,
+            'CreatedAt', created_at,
+            'IsRedacted', is_redacted,
+            'IsDeleted', is_deleted,
+            'RedactedAt', redacted_at
+        ) as last_message_json
     from messages
-    where chat_id in (select chat_id from chats)
+    where chat_id in (select chat_id from chats_ids)
     order by chat_id, message_id desc
+),
+members_aggregated AS (
+    select
+        c.chat_id,
+        json_agg(
+            json_build_object(
+                'UserId', c.user_id,
+                'Name', p.name,
+                'JoinedAt', c.joined_at
+            )
+        ) AS members_json
+    from chatmembers c
+    join profiles p on p.user_id = c.user_id
+    where chat_id in (select chat_id from chats_ids)
+    group by c.chat_id
 )
 select
-    c.chat_id, lm.message_id,
-    lm.sender_id, p.name,
-    lm.message, lm.created_at
-from chats c
+    -- Chat
+    c.chat_id, ch.created_at,
+    -- Members
+    coalesce(ma.members_json, '[]'::json) as chat_members,
+    -- Last Message Info
+    lm.last_message_json as last_message
+from chats_ids c
+join chats ch on ch.id = c.chat_id
+left join members_aggregated ma on ma.chat_id = c.chat_id
 left join lastMessage lm on lm.chat_id = c.chat_id
-left join profiles p on p.user_id = lm.sender_id
 order by lm.created_at desc nulls first;

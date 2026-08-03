@@ -159,7 +159,7 @@ func (r *PostagreRepo) GetChatInfo(ctx context.Context, chatId uuid.UUID) (*serv
 	if err != nil {
 		return nil, getErrorMsg(err)
 	}
-	info.ChatMembers, err = r.GetChatMembers(ctx, chatId)
+	info.Members, err = r.GetChatMembers(ctx, chatId)
 	if err != nil {
 		return nil, err
 	}

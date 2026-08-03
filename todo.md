@@ -1,1 +1,0 @@
-- В /api/msg/profile/chats/full прокинуть ChatMembers

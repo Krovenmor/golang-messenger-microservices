@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,15 +34,13 @@ type ChatMember struct {
 }
 
 type ChatInfo struct {
-	CreatedAt   time.Time
-	ChatMembers []ChatMember
+	CreatedAt time.Time
+	Members   []ChatMember
 }
 
 type ChatFullInfo struct {
-	ChatId    uuid.UUID
-	MessageId uuid.UUID
-	SenderId  uuid.UUID
-	Name      *string
-	Message   *string
-	CreatedAt *time.Time
+	ChatId      uuid.UUID
+	CreatedAt   time.Time
+	Members     json.RawMessage
+	LastMessage json.RawMessage
 }
