@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/coder/websocket"
@@ -14,7 +16,9 @@ import (
 )
 
 type WSHandler struct {
-	sub Subscriber
+	sub         Subscriber
+	connCounter atomic.Int64
+	connMap     sync.Map
 }
 
 func NewWSHandler(subscriber Subscriber) *WSHandler {
@@ -35,8 +39,6 @@ func (h *WSHandler) HandleConnection(w http.ResponseWriter, r *http.Request, use
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "Normal closure")
 
-	log.Printf("Client has arrived, Address:%q, ID:%q", r.RemoteAddr, userId.String())
-
 	ch, cancel, err := h.sub.Subscribe(ctx, fmt.Sprintf("user:%s:events", userId.String()))
 	if err != nil {
 		log.Printf("HandleConnection: Trouble with Subscribe, err: %q", err.Error())
@@ -45,11 +47,36 @@ func (h *WSHandler) HandleConnection(w http.ResponseWriter, r *http.Request, use
 	}
 	defer cancel()
 
+	logError := "No error"
+	startLog := func() func() {
+		currentClients := h.connCounter.Add(1)
+		val, isLoaded := h.connMap.Load(userId)
+		var iVal int
+		if !isLoaded {
+			iVal = 0
+		} else {
+			iVal = val.(int)
+		}
+		iVal++
+		h.connMap.Store(userId, iVal)
+		log.Printf("Сlient connected: Clients counter:%d, Client number of alive conns:%d, UserID: %s", currentClients, iVal, userId.String())
+
+		return func() {
+			currentClients := h.connCounter.Add(-1)
+			val, _ := h.connMap.Load(userId)
+			iVal := val.(int) - 1
+			log.Printf("Сlient disconnected: Clients counter:%d, Client number of alive conns:%d, UserID: %s, err: %q", currentClients, iVal, userId.String(), logError)
+			h.connMap.Store(userId, iVal)
+		}
+	}
+	endLog := startLog()
+	defer endLog()
+
 	go func() {
 		for {
 			_, _, err := conn.Read(ctx)
 			if err != nil {
-				log.Printf("conn.Read(), UserID: %s, err: %v", userId.String(), err)
+				logError = fmt.Sprintf("conn.Read(), err: %v", err)
 				return
 			}
 		}
@@ -61,12 +88,12 @@ func (h *WSHandler) HandleConnection(w http.ResponseWriter, r *http.Request, use
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("Client disconnected (context canceled), UserID: %s", userId.String())
+			logError = "context canceled"
 			return
 
 		case msg, ok := <-ch:
 			if !ok {
-				log.Printf("Event channel closed for UserID: %s", userId.String())
+				logError = "Event channel closed"
 				return
 			}
 
@@ -78,7 +105,7 @@ func (h *WSHandler) HandleConnection(w http.ResponseWriter, r *http.Request, use
 
 			err = conn.Write(ctx, websocket.MessageText, msg)
 			if err != nil {
-				log.Printf("Client write failed (likely disconnected), UserID: %s, err: %v", userId.String(), err)
+				logError = fmt.Sprintf("Client write failed, err: %v", err)
 				return
 			}
 
@@ -87,7 +114,7 @@ func (h *WSHandler) HandleConnection(w http.ResponseWriter, r *http.Request, use
 			err := conn.Ping(ctxWithTime)
 			cancelCTX()
 			if err != nil {
-				log.Printf("Client ping failed (likely disconnected), UserID: %s, err: %v", userId.String(), err)
+				logError = fmt.Sprintf("Client ping failed, err: %v", err)
 				return
 			}
 		}
