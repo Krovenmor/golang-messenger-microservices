@@ -2,14 +2,9 @@ package repo
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-)
-
-var (
-	ErrNotFound = fmt.Errorf("not found")
 )
 
 func GetSliceQueryByPos[R any](ctx context.Context, pool *pgxpool.Pool, query string, args ...any) ([]R, error) {
@@ -23,10 +18,6 @@ func GetSliceQueryByPos[R any](ctx context.Context, pool *pgxpool.Pool, query st
 	rVal, err = pgx.CollectRows(rows, pgx.RowToStructByPos[R])
 	if err != nil {
 		return nil, err
-	}
-
-	if len(rVal) == 0 {
-		return nil, ErrNotFound
 	}
 
 	return rVal, nil
@@ -48,8 +39,5 @@ func GetSliceQueryByFunc[R any](ctx context.Context, pool *pgxpool.Pool, query s
 		return nil, err
 	}
 
-	if len(rVal) == 0 {
-		return nil, ErrNotFound
-	}
 	return rVal, nil
 }

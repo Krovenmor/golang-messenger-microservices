@@ -5,7 +5,6 @@ import (
 	"MyMessenger/services/msg/internal/infra/postgres/queries"
 	"MyMessenger/services/msg/internal/service"
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -170,9 +169,6 @@ func (r *PostagreRepo) GetChatInfo(ctx context.Context, chatId uuid.UUID) (*serv
 func (r *PostagreRepo) GetChatHistory(ctx context.Context, chatId uuid.UUID, fromId uuid.UUID, q int) ([]service.Message, error) {
 	messages, err := repo.GetSliceQueryByPos[service.Message](ctx, r.pool, r.q.GetChatHistory, chatId, fromId, q)
 	if err != nil {
-		if errors.Is(err, repo.ErrNotFound) {
-			return []service.Message{}, nil
-		}
 		return messages, getErrorMsg(err)
 	}
 	return messages, nil
