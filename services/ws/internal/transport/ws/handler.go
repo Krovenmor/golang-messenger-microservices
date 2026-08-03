@@ -51,10 +51,8 @@ func (h *WSHandler) HandleConnection(w http.ResponseWriter, r *http.Request, use
 	startLog := func() func() {
 		currentClients := h.connCounter.Add(1)
 		val, isLoaded := h.connMap.Load(userId)
-		var iVal int
-		if !isLoaded {
-			iVal = 0
-		} else {
+		iVal := 0
+		if isLoaded {
 			iVal = val.(int)
 		}
 		iVal++
@@ -65,8 +63,8 @@ func (h *WSHandler) HandleConnection(w http.ResponseWriter, r *http.Request, use
 			currentClients := h.connCounter.Add(-1)
 			val, _ := h.connMap.Load(userId)
 			iVal := val.(int) - 1
-			log.Printf("Сlient disconnected: Clients counter:%d, Client number of alive conns:%d, UserID: %s, err: %q", currentClients, iVal, userId.String(), logError)
 			h.connMap.Store(userId, iVal)
+			log.Printf("Сlient disconnected: Clients counter:%d, Client number of alive conns:%d, UserID: %s, err: %q", currentClients, iVal, userId.String(), logError)
 		}
 	}
 	endLog := startLog()
