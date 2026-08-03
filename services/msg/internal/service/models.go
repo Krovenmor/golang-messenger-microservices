@@ -28,6 +28,7 @@ type Profile struct {
 
 type ChatMember struct {
 	UserId   uuid.UUID
+	Name     string
 	JoinedAt time.Time
 }
 

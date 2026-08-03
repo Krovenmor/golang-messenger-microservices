@@ -21,11 +21,11 @@ func getErrorMsg(err error) error {
 	if errors.As(err, &pgErr) {
 		if pgErr.Code == "23503" {
 			switch pgErr.ConstraintName {
-			case "messages_chatid_fkey":
+			case "messages_chat_id_fkey":
 				return ErrChatNotFound
-			case "messages_sentid_fkey":
+			case "messages_sender_id_fkey":
 				return ErrUserNotFound
-			case "chatmembers_userid_fkey":
+			case "chatmembers_user_id_fkey":
 				return ErrUserNotFound
 			}
 		}

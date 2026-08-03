@@ -167,7 +167,11 @@ Outcome:
 {  
     "CreatedAt": "Time when it was created",
     "Members": [
-        {"UserId": "UUID", "JoinedAt": "Time"}, {...} ...
+        {
+            "UserId": "UUID", 
+            "Name": "Name",
+            "JoinedAt": "Time"
+        }, ...
     ]
 }
 ```
