@@ -3,20 +3,21 @@ package redis
 import (
 	"MyMessenger/pkg/broker"
 	"MyMessenger/pkg/redis"
+	"MyMessenger/services/msg/internal/config"
 	"context"
 
 	"github.com/google/uuid"
 )
 
-var pattern = "user:%s:events"
-
 type publisher struct {
-	pub *redis.RedisPublisher
+	pub        *redis.RedisPublisher
+	pubPattern string
 }
 
-func NewPublisher(pub *redis.RedisPublisher) (*publisher, error) {
+func NewPublisher(pub *redis.RedisPublisher, conf *config.RedisPatternConfig) (*publisher, error) {
 	return &publisher{
-		pub: pub,
+		pub:        pub,
+		pubPattern: conf.PubPattern,
 	}, nil
 }
 
@@ -27,7 +28,7 @@ func (p *publisher) PublishNewChat(ctx context.Context, chatId uuid.UUID, usersT
 			ChatId: chatId.String(),
 		},
 	}
-	redis.PublishEventToGroup(ctx, p.pub, pattern, event, usersTo)
+	redis.PublishEventToGroup(ctx, p.pub, p.pubPattern, event, usersTo)
 }
 
 func (p *publisher) PublishNewMessage(ctx context.Context, chatId, msgId uuid.UUID, usersTo []uuid.UUID) {
@@ -38,7 +39,7 @@ func (p *publisher) PublishNewMessage(ctx context.Context, chatId, msgId uuid.UU
 			MsgId:  msgId.String(),
 		},
 	}
-	redis.PublishEventToGroup(ctx, p.pub, pattern, event, usersTo)
+	redis.PublishEventToGroup(ctx, p.pub, p.pubPattern, event, usersTo)
 }
 
 func (p *publisher) PublishMessageWasRedacted(ctx context.Context, chatId, msgId uuid.UUID, usersTo []uuid.UUID) {
@@ -49,7 +50,7 @@ func (p *publisher) PublishMessageWasRedacted(ctx context.Context, chatId, msgId
 			MsgId:  msgId.String(),
 		},
 	}
-	redis.PublishEventToGroup(ctx, p.pub, pattern, event, usersTo)
+	redis.PublishEventToGroup(ctx, p.pub, p.pubPattern, event, usersTo)
 }
 
 func (p *publisher) PublishMessageWasDeleted(ctx context.Context, chatId, msgId uuid.UUID, usersTo []uuid.UUID) {
@@ -60,5 +61,5 @@ func (p *publisher) PublishMessageWasDeleted(ctx context.Context, chatId, msgId 
 			MsgId:  msgId.String(),
 		},
 	}
-	redis.PublishEventToGroup(ctx, p.pub, pattern, event, usersTo)
+	redis.PublishEventToGroup(ctx, p.pub, p.pubPattern, event, usersTo)
 }
