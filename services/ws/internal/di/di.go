@@ -3,8 +3,7 @@ package di
 import (
 	stdconfig "MyMessenger/pkg/config"
 	"MyMessenger/pkg/di"
-
-	"MyMessenger/services/ws/internal/infra/redis"
+	"MyMessenger/pkg/redis"
 
 	web "MyMessenger/services/ws/internal/transport/http"
 	"MyMessenger/services/ws/internal/transport/ws"
@@ -14,23 +13,24 @@ import (
 	"go.uber.org/fx"
 )
 
+func ProvideSubscribeService(s *redis.RedisSubscriber) ws.Subscriber {
+	return ws.Subscriber(s)
+}
+
 func GetModule() fx.Option {
 	return fx.Options(
 
 		di.AuthenticatorModule,
+		di.RedisSubscriberModule,
 
 		// Configs
 		fx.Provide(
 			stdconfig.GetServConfig,
-			stdconfig.GetRedisConfig,
 		),
 
 		// Msg Broker
 		fx.Provide(
-			fx.Annotate(
-				redis.NewRedisSubscriber,
-				fx.As(new(ws.Subscriber)),
-			),
+			ProvideSubscribeService,
 		),
 
 		// ServeMux
