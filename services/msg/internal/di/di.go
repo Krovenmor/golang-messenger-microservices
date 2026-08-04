@@ -20,12 +20,12 @@ func GetModule() fx.Option {
 	return fx.Options(
 
 		di.AuthenticatorModule,
+		di.RedisPublisherModule,
 
 		// Configs
 		fx.Provide(
 			stdconfig.GetRepoConfig,
 			stdconfig.GetServConfig,
-			stdconfig.GetRedisConfig,
 			config.GetMessageConfig,
 		),
 
@@ -50,7 +50,7 @@ func GetModule() fx.Option {
 		// Msg Broker
 		fx.Provide(
 			fx.Annotate(
-				redis.NewRedisPublisher,
+				redis.NewPublisher,
 				fx.As(new(service.EventPublisher)),
 			),
 		),
