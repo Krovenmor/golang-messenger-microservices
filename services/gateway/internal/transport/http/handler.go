@@ -46,6 +46,7 @@ func (h *MainHandler) RegisterRoutes(m *http.ServeMux) (http.Handler, error) {
 	msgProxy := getParsed(h.conf.MsgServiceURL)
 	wsProxy := getParsed(h.conf.WsServiceURL)
 	webProxy := getParsed(h.conf.WebServiceURL)
+	statProxy := getParsed(h.conf.StatusServiceURL)
 
 	if err != nil {
 		return nil, err
@@ -54,6 +55,7 @@ func (h *MainHandler) RegisterRoutes(m *http.ServeMux) (http.Handler, error) {
 	protected("/api/auth/", authProxy)
 	protected("/api/msg/", msgProxy)
 	protected("/api/ws", wsProxy)
+	protected("/api/status/", statProxy)
 
 	m.Handle("/", webProxy)
 

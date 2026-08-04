@@ -199,7 +199,7 @@ Income:
 **Endpoint works only with JWT token from Auth API**  
 
 - **"WS: /api/ws?token={YourAccessToken}"** - start websocket connection  
-By connecting to socket, you will recieve data:  
+By connecting to socket, you will recieve events:  
 ```json
 {  
     "type": "EventType",  
@@ -247,3 +247,45 @@ By connecting to socket, you will recieve data:
     }  
 }  
 ```
+
+**Statuses:**  
+- You can send your status via ws connection:  
+Income: (Example)  
+```json
+{
+    "newStatus": 3
+}
+```
+Outcome: (Example)  
+```json
+{
+    "Code": 200,
+    "Message": "OK"
+}
+```  
+- newStatus - supports only Statuses from Status API  
+- Code - http codes, 200 or 400  
+- All possible outcomes:
+    - 200, "OK"
+    - 400, "Bad JSON"
+    - 400, "Bad Status"  
+
+*When you connect via ws, you already get status Online, so don't send it. When you disconnect your profile automatically gain Offline status  
+
+# **Status API:**  
+## - "GET /api/status/{ProfileUUID}" - get last known profile status  
+Outcome: (Example)
+```json
+{
+    "Status": 1,
+    "LastSeen": 1785881345
+}
+```
+Statuses:  
+- Offline = 1  
+- Online = 2  
+- Away = 3  
+- Typing = 4  
+
+LastSeen - Unix time  
+If LastSeen = 0 then profile not exists or was online a very long time ago  

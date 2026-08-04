@@ -3,10 +3,11 @@ package config
 import "MyMessenger/pkg/config"
 
 type MainHandlerConfig struct {
-	AuthServiceURL string
-	MsgServiceURL  string
-	WsServiceURL   string
-	WebServiceURL  string
+	AuthServiceURL   string
+	MsgServiceURL    string
+	WsServiceURL     string
+	WebServiceURL    string
+	StatusServiceURL string
 }
 
 func GetMainHandlerConfig() (*MainHandlerConfig, error) {
@@ -25,10 +26,11 @@ func GetMainHandlerConfig() (*MainHandlerConfig, error) {
 	}
 
 	conf = MainHandlerConfig{
-		AuthServiceURL: get("AUTH_URL"),
-		MsgServiceURL:  get("MSG_URL"),
-		WsServiceURL:   get("WS_URL"),
-		WebServiceURL:  get("WEB_URL"),
+		AuthServiceURL:   get("AUTH_URL"),
+		MsgServiceURL:    get("MSG_URL"),
+		WsServiceURL:     get("WS_URL"),
+		WebServiceURL:    get("WEB_URL"),
+		StatusServiceURL: get("STAT_URL"),
 	}
 
 	if err != nil {

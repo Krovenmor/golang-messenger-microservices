@@ -17,9 +17,7 @@ func NewRedisSubscriber(rdClient *redis.Client) *RedisSubscriber {
 	}
 }
 
-func (s *RedisSubscriber) Subscribe(ctx context.Context, channel string) (<-chan []byte, func(), error) {
-	sub := s.rdClient.Subscribe(ctx, channel)
-
+func (s *RedisSubscriber) subscribe(ctx context.Context, sub *redis.PubSub) (<-chan []byte, func(), error) {
 	_, err := sub.Receive(ctx)
 	if err != nil {
 		log.Printf("Subscribe: Failed to sub.Receive, err: %q", err.Error())
@@ -48,4 +46,14 @@ func (s *RedisSubscriber) Subscribe(ctx context.Context, channel string) (<-chan
 	}
 
 	return out, cancel, nil
+}
+
+func (s *RedisSubscriber) PatternSubscribe(ctx context.Context, pattern string) (<-chan []byte, func(), error) {
+	sub := s.rdClient.PSubscribe(ctx, pattern)
+	return s.subscribe(ctx, sub)
+}
+
+func (s *RedisSubscriber) Subscribe(ctx context.Context, channel string) (<-chan []byte, func(), error) {
+	sub := s.rdClient.Subscribe(ctx, channel)
+	return s.subscribe(ctx, sub)
 }

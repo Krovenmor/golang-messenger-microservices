@@ -20,7 +20,7 @@ func NewRedisPublisher(rdClient *redis.Client) *RedisPublisher {
 	}
 }
 
-func (p *RedisPublisher) PublishEvent(ctx context.Context, channel string, event broker.Event) error {
+func (p *RedisPublisher) PublishEvent(ctx context.Context, channel string, event any) error {
 	data, err := json.Marshal(event)
 	if err != nil {
 		log.Printf("PublishEvent: trouble with Marshaling event:%v, err:%q", event, err.Error())

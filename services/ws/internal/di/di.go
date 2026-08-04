@@ -5,6 +5,9 @@ import (
 	"MyMessenger/pkg/di"
 	"MyMessenger/pkg/redis"
 
+	"MyMessenger/services/ws/internal/config"
+	"MyMessenger/services/ws/internal/infra"
+	"MyMessenger/services/ws/internal/service"
 	web "MyMessenger/services/ws/internal/transport/http"
 	"MyMessenger/services/ws/internal/transport/ws"
 
@@ -13,29 +16,47 @@ import (
 	"go.uber.org/fx"
 )
 
-func ProvideSubscribeService(s *redis.RedisSubscriber) ws.Subscriber {
-	return ws.Subscriber(s)
-}
-
 func GetModule() fx.Option {
 	return fx.Options(
 
 		di.AuthenticatorModule,
-		di.RedisSubscriberModule,
+		di.RedisClientModule,
+
+		fx.Provide(
+			redis.NewRedisPublisher,
+			redis.NewRedisSubscriber,
+		),
 
 		// Configs
 		fx.Provide(
 			stdconfig.GetServConfig,
+			config.GetRedisPatternConfig,
+			config.GetWsConfig,
 		),
 
 		// Msg Broker
 		fx.Provide(
-			ProvideSubscribeService,
+			fx.Annotate(
+				infra.NewPublisher,
+				fx.As(new(service.Publisher)),
+			),
+			fx.Annotate(
+				infra.NewSubscriber,
+				fx.As(new(service.Subscriber)),
+			),
 		),
 
 		// ServeMux
 		fx.Provide(
 			http.NewServeMux,
+		),
+
+		// Service
+		fx.Provide(
+			fx.Annotate(
+				service.NewWsService,
+				fx.As(new(service.WsService)),
+			),
 		),
 
 		// Handlers
@@ -50,6 +71,7 @@ func GetModule() fx.Option {
 
 		// Final, main invoke
 		fx.Invoke(
+			service.ComputeJsonResponses,
 			di.InvokeServer,
 		),
 	)
