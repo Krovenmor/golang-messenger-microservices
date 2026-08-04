@@ -19,24 +19,12 @@ func recv[T any](w http.ResponseWriter, r *http.Request) (*T, error) {
 	return toRecv, nil
 }
 
-func getUuidFromPath(r *http.Request, key string) (uuid.UUID, error) {
-	UUID := r.PathValue(key)
-	if UUID == "" {
-		return uuid.Nil, fmt.Errorf("Empty %q UUID", key)
-	}
-	cUUID, err := uuid.Parse(UUID)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("Bad %q UUID", key)
-	}
-	return cUUID, nil
-}
-
 func getChatUuidFromPath(r *http.Request) (uuid.UUID, error) {
-	return getUuidFromPath(r, chatIdKey)
+	return utils.GetUuidFromPath(r, chatIdKey)
 }
 
 func getMsgUuidFromPath(r *http.Request) (uuid.UUID, error) {
-	return getUuidFromPath(r, messageIdKey)
+	return utils.GetUuidFromPath(r, messageIdKey)
 }
 
 func getQueryParam(vals url.Values, key string) (string, error) {

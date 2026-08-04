@@ -58,3 +58,15 @@ func GetUuidFromContext(r *http.Request) (uuid.UUID, error) {
 	}
 	return uUserId, nil
 }
+
+func GetUuidFromPath(r *http.Request, key string) (uuid.UUID, error) {
+	UUID := r.PathValue(key)
+	if UUID == "" {
+		return uuid.Nil, fmt.Errorf("Empty %q UUID", key)
+	}
+	cUUID, err := uuid.Parse(UUID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("Bad %q UUID", key)
+	}
+	return cUUID, nil
+}
