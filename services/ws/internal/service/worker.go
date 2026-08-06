@@ -88,7 +88,7 @@ func (s *wsWorker) changeStatus(newStatus broker.Status) {
 }
 
 func (s *wsWorker) isValidStatus(status broker.Status) bool {
-	return broker.IsValidStatus(status) && status != broker.Offline && status != broker.Online
+	return broker.IsValidStatus(status) && status != broker.Offline
 }
 
 func (s *wsWorker) startReader() {
