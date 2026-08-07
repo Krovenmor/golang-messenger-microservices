@@ -302,10 +302,13 @@ Income: (Example)
 ```
 Outcome: (Example)  
 ```json
-{
-    "code": 200,
-    "message": "OK"
-}
+{  
+    "type": "response",  
+    "payload": {
+        "code": 200,
+        "msg": "OK"
+    }  
+}  
 ```  
 - Requests:
     - 1: post your status
