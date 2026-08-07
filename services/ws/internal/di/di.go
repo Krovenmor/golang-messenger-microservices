@@ -5,6 +5,7 @@ import (
 	"MyMessenger/pkg/di"
 	"MyMessenger/pkg/redis"
 
+	"MyMessenger/services/ws/internal/client/msg"
 	"MyMessenger/services/ws/internal/config"
 	"MyMessenger/services/ws/internal/infra"
 	"MyMessenger/services/ws/internal/service"
@@ -32,6 +33,7 @@ func GetModule() fx.Option {
 			stdconfig.GetServConfig,
 			config.GetRedisPatternConfig,
 			config.GetWsConfig,
+			config.GetMsgClientConfig,
 		),
 
 		// Msg Broker
@@ -43,6 +45,14 @@ func GetModule() fx.Option {
 			fx.Annotate(
 				infra.NewSubscriber,
 				fx.As(new(service.Subscriber)),
+			),
+		),
+
+		// Msg Client
+		fx.Provide(
+			fx.Annotate(
+				msg.NewMsgClient,
+				fx.As(new(service.MessageClient)),
 			),
 		),
 

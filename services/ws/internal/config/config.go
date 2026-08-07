@@ -7,8 +7,14 @@ type WsConfig struct {
 }
 
 type RedisPatternConfig struct {
-	PatternPub string
-	PatternSub string
+	PubPattern string
+
+	SubUserPattern string
+	SubChatPattern string
+}
+
+type MsgClientConfig struct {
+	FullURL string
 }
 
 func GetRedisPatternConfig() (*RedisPatternConfig, error) {
@@ -16,13 +22,18 @@ func GetRedisPatternConfig() (*RedisPatternConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	sub, err := config.GetEnvVar("REDIS_SUB_PATTERN")
+	subUser, err := config.GetEnvVar("REDIS_SUB_USER_PATTERN")
+	if err != nil {
+		return nil, err
+	}
+	subChat, err := config.GetEnvVar("REDIS_SUB_CHAT_PATTERN")
 	if err != nil {
 		return nil, err
 	}
 	return &RedisPatternConfig{
-		PatternPub: pub,
-		PatternSub: sub,
+		PubPattern:     pub,
+		SubUserPattern: subUser,
+		SubChatPattern: subChat,
 	}, nil
 }
 
@@ -33,5 +44,19 @@ func GetWsConfig() (*WsConfig, error) {
 	}
 	return &WsConfig{
 		WsReadLimit: int64(limit),
+	}, nil
+}
+
+func GetMsgClientConfig() (*MsgClientConfig, error) {
+	msgBase, err := config.GetEnvVar("MSG_URL")
+	if err != nil {
+		return nil, err
+	}
+	msgChatsPath, err := config.GetEnvVar("MSG_GET_CHATS_PATH")
+	if err != nil {
+		return nil, err
+	}
+	return &MsgClientConfig{
+		FullURL: msgBase + msgChatsPath,
 	}, nil
 }

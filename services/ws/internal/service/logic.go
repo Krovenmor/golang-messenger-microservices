@@ -6,22 +6,23 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/coder/websocket"
 	"github.com/google/uuid"
 )
 
 type wsService struct {
-	sub Subscriber
-	pub Publisher
+	sub       Subscriber
+	pub       Publisher
+	msgClient MessageClient
 
 	connCounter atomic.Int64
 	connMap     sync.Map
 }
 
-func NewWsService(sub Subscriber, pub Publisher) *wsService {
+func NewWsService(sub Subscriber, pub Publisher, msgClient MessageClient) *wsService {
 	return &wsService{
-		sub: sub,
-		pub: pub,
+		sub:       sub,
+		pub:       pub,
+		msgClient: msgClient,
 	}
 }
 
@@ -45,20 +46,10 @@ func (s *wsService) startLog(userId uuid.UUID) func() {
 	}
 }
 
-func (s *wsService) StartService(ctx context.Context, conn *websocket.Conn, userId uuid.UUID) {
-	chUserEvents, cancelEvents, err := s.sub.Subscribe(ctx, userId.String())
-	if err != nil {
-		log.Printf("StartService: Trouble with Subscribe, err: %q", err.Error())
-		conn.Close(websocket.StatusInternalError, "failed to subscribe")
-		return
-	}
-	defer cancelEvents()
-
+func (s *wsService) StartService(ctx context.Context, conn Connector, userId uuid.UUID, accessToken string) error {
 	endLog := s.startLog(userId)
 	defer endLog()
 
-	cCtx, cancelCtx := context.WithCancel(ctx)
-	worker := newWsWorker(s.sub, s.pub, conn, cCtx, cancelCtx, userId)
-	go worker.startReader()
-	worker.startWriter(chUserEvents)
+	worker := newWsWorker(s.sub, s.pub, s.msgClient, conn)
+	return worker.startAll(ctx, accessToken, userId)
 }

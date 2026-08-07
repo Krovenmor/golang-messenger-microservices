@@ -41,7 +41,7 @@ func (h *MainHandler) HandleWS(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	h.wsHandler.HandleConnection(w, r, userId)
+	h.wsHandler.HandleConnection(w, r, userId, accessToken)
 }
 
 func (h *MainHandler) RegisterRoutes(m *http.ServeMux) (http.Handler, error) {

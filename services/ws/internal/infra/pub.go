@@ -17,12 +17,16 @@ type RedisPublisher struct {
 func NewPublisher(pub *redis.RedisPublisher, conf *config.RedisPatternConfig) *RedisPublisher {
 	return &RedisPublisher{
 		pub:     pub,
-		pattern: conf.PatternPub,
+		pattern: conf.PubPattern,
 	}
 }
 
-func (p *RedisPublisher) PublishUserStatus(ctx context.Context, status broker.StatusEvent) {
+func (p *RedisPublisher) PublishUserStatus(ctx context.Context, status broker.StatusPayload) {
 	channel := fmt.Sprintf(p.pattern, status.UserId)
-	err := p.pub.PublishEvent(ctx, fmt.Sprintf(p.pattern, status.UserId), status)
-	log.Printf("Published new status, channel: %q, event: %v, err: %v", channel, status, err)
+	event := broker.Event{
+		Type:    broker.StatusEvent,
+		Payload: status,
+	}
+	err := p.pub.PublishEvent(ctx, channel, event)
+	log.Printf("Published new status, channel: %q, event: %v, err: %v", channel, event, err)
 }

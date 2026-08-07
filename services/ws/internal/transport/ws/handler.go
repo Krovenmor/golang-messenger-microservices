@@ -3,7 +3,10 @@ package ws
 import (
 	"MyMessenger/services/ws/internal/config"
 	"MyMessenger/services/ws/internal/service"
+	"context"
+	"errors"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/coder/websocket"
@@ -22,7 +25,7 @@ func NewWSHandler(wsService service.WsService, conf *config.WsConfig) *WSHandler
 	}
 }
 
-func (h *WSHandler) HandleConnection(w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
+func (h *WSHandler) HandleConnection(w http.ResponseWriter, r *http.Request, userId uuid.UUID, aToken string) {
 	ctx := r.Context()
 
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
@@ -33,7 +36,37 @@ func (h *WSHandler) HandleConnection(w http.ResponseWriter, r *http.Request, use
 		return
 	}
 	conn.SetReadLimit(h.readLimit)
-	defer conn.Close(websocket.StatusNormalClosure, "Normal closure")
 
-	h.wsService.StartService(ctx, conn, userId)
+	connCloseCode := websocket.StatusNormalClosure
+	connCloseMsg := "Normal closure"
+
+	err = h.wsService.StartService(ctx, &Connector{conn: conn}, userId, aToken)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrUnauthorized):
+			connCloseCode = websocket.StatusPolicyViolation
+			connCloseMsg = "unauthorized"
+
+		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+			connCloseCode = websocket.StatusGoingAway
+			connCloseMsg = "server shutdown or timeout"
+
+		default:
+			connCloseCode = websocket.StatusInternalError
+			connCloseMsg = "internal error"
+		}
+	}
+
+	err = conn.Close(connCloseCode, connCloseMsg)
+	if err != nil {
+		status := websocket.CloseStatus(err)
+		if status == websocket.StatusNormalClosure || status == websocket.StatusGoingAway {
+			return
+		}
+		if errors.Is(err, net.ErrClosed) {
+			return
+		}
+		log.Printf("conn.Close() err for user %s: %v", userId, err)
+	}
 }

@@ -247,28 +247,69 @@ By connecting to socket, you will recieve events:
     }  
 }  
 ```
+- StatusEvent:
+```json
+{  
+    "type": "status",  
+    "payload": {
+        "userId": "UUID of a user",
+        "newStatus": 2,
+        "eventTime": 1786069519 (unixTime)
+    }  
+}  
+```
 
 **Statuses:**  
 - You can send your status via ws connection:  
 Income: (Example)  
 ```json
 {
-    "newStatus": 3
+    "req": 1,
+    "payload": {
+        "newStatus": 3
+    }
+}
+```
+Outcome: (Example)  
+```json
+{  
+    "type": "response",  
+    "payload": {
+        "code": 200,
+        "msg": "OK"
+    }  
+}  
+```  
+- newStatus - supports only Statuses from Status API  
+- code - http codes, 200 or 400  
+- All possible outcomes:
+    - 200, "OK"
+    - 400, "Bad JSON"
+    - 400, "Bad Status"  
+    - 400, "Bad UUID"
+    - 400, "Bad Request"
+    - 500, "Intrnal Error"
+
+- You can also make request to track someone statuses (primary use: 1v1 chat):  
+Income: (Example)  
+```json
+{
+    "req": 2,
+    "payload": {
+        "userId": "{{OtherUserId}}"
+    }
 }
 ```
 Outcome: (Example)  
 ```json
 {
-    "Code": 200,
-    "Message": "OK"
+    "code": 200,
+    "message": "OK"
 }
 ```  
-- newStatus - supports only Statuses from Status API  
-- Code - http codes, 200 or 400  
-- All possible outcomes:
-    - 200, "OK"
-    - 400, "Bad JSON"
-    - 400, "Bad Status"  
+- Requests:
+    - 1: post your status
+    - 2: track someone  
 
 *When you connect via ws, you already get status Online, so don't send it. When you disconnect your profile automatically gain Offline status  
 

@@ -120,8 +120,11 @@ services:
       - REDIS_PASSWORD=""
       - REDIS_DB=0
       - REDIS_PUB_PATTERN=user:%s:status
-      - REDIS_SUB_PATTERN=user:%s:events
+      - REDIS_SUB_USER_PATTERN=user:%s:events
+      - REDIS_SUB_CHAT_PATTERN=chat:%s:events
       - WS_READ_LIMIT=1024
+      - MSG_URL=http://msg-service:8082
+      - MSG_GET_CHATS_PATH=/api/msg/profile/chats
     depends_on:
       redis-db:
         condition: service_healthy
