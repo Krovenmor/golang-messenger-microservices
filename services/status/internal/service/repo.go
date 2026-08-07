@@ -8,5 +8,5 @@ import (
 
 type StatusRepo interface {
 	GetStatus(ctx context.Context, userId string) (*UserStatus, error)
-	SaveStatus(ctx context.Context, status broker.StatusEvent, ttl time.Duration) error
+	SaveStatus(ctx context.Context, status broker.StatusPayload, ttl time.Duration) error
 }

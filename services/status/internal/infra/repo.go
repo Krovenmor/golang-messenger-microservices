@@ -26,7 +26,7 @@ func (r *RedisRepo) ToKey(userId string) string {
 	return fmt.Sprintf(r.pattern, userId)
 }
 
-func (r *RedisRepo) ToSave(s *broker.StatusEvent) string {
+func (r *RedisRepo) ToSave(s *broker.StatusPayload) string {
 	return fmt.Sprintf("%d:%d", s.Status, s.EventTime)
 }
 
@@ -61,7 +61,7 @@ func (r *RedisRepo) GetStatus(ctx context.Context, userId string) (*service.User
 	return status, nil
 }
 
-func (r *RedisRepo) SaveStatus(ctx context.Context, status broker.StatusEvent, ttl time.Duration) error {
+func (r *RedisRepo) SaveStatus(ctx context.Context, status broker.StatusPayload, ttl time.Duration) error {
 	err := r.rd.Set(ctx, r.ToKey(status.UserId), r.ToSave(&status), ttl).Err()
 	if err != nil {
 		return fmt.Errorf("Trouble with saving, err: %w", err)

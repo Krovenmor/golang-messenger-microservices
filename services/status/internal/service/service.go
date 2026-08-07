@@ -12,5 +12,5 @@ type UserStatus struct {
 
 type StatusService interface {
 	GetStatus(ctx context.Context, userId string) UserStatus
-	SaveStatus(ctx context.Context, event broker.StatusEvent) error
+	SaveStatus(ctx context.Context, event broker.StatusPayload) error
 }

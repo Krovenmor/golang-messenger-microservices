@@ -13,6 +13,11 @@ import (
 	"go.uber.org/fx"
 )
 
+type StatusEventDTO struct {
+	Type    broker.EventType     `json:"type"`
+	Payload broker.StatusPayload `json:"payload"`
+}
+
 type Subscriber interface {
 	PatternSubscribe(ctx context.Context, channel string) (<-chan []byte, func(), error)
 }
@@ -55,7 +60,7 @@ func (c *Consumer) startConsuming(ctx context.Context) {
 				return
 			}
 
-			var event broker.StatusEvent
+			var event StatusEventDTO
 			err := json.Unmarshal(data, &event)
 			if err != nil {
 				log.Printf("startConsuming: Bad JSON from broker, data: %q", data)
@@ -64,7 +69,7 @@ func (c *Consumer) startConsuming(ctx context.Context) {
 
 			log.Printf("startConsuming: New status event, event: %v", event)
 
-			err = c.stService.SaveStatus(ctx, event)
+			err = c.stService.SaveStatus(ctx, event.Payload)
 			if err != nil {
 				log.Printf("startConsuming: trouble with saving event: %q", err.Error())
 			}
