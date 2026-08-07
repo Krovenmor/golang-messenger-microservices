@@ -11,31 +11,15 @@ type MainHandlerConfig struct {
 }
 
 func GetMainHandlerConfig() (*MainHandlerConfig, error) {
-	var (
-		conf MainHandlerConfig
-		err  error
-	)
+	r := config.NewConfigReader()
 
-	get := func(envKey string) string {
-		if err != nil {
-			return ""
-		}
-		var val string
-		val, err = config.GetEnvVar(envKey)
-		return val
+	conf := MainHandlerConfig{
+		AuthServiceURL:   r.GetString("AUTH_URL"),
+		MsgServiceURL:    r.GetString("MSG_URL"),
+		WsServiceURL:     r.GetString("WS_URL"),
+		WebServiceURL:    r.GetString("WEB_URL"),
+		StatusServiceURL: r.GetString("STAT_URL"),
 	}
 
-	conf = MainHandlerConfig{
-		AuthServiceURL:   get("AUTH_URL"),
-		MsgServiceURL:    get("MSG_URL"),
-		WsServiceURL:     get("WS_URL"),
-		WebServiceURL:    get("WEB_URL"),
-		StatusServiceURL: get("STAT_URL"),
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &conf, nil
+	return &conf, r.Err()
 }
