@@ -6,22 +6,42 @@ type RedisConfig struct {
 	DB       int
 }
 
+type RedisChannelsConfig struct {
+	UserStatusPattern string
+	UserEventsPattern string
+	UserBanChannel    string
+	ChatEventsPattern string
+}
+
 func GetRedisConfig() (*RedisConfig, error) {
-	addr, err := GetEnvVar("REDIS_ADDRESS")
-	if err != nil {
-		return nil, err
+	r := NewConfigReader()
+
+	conf := RedisConfig{
+		Address:  r.GetString("REDIS_ADDRESS"),
+		Password: r.GetString("REDIS_PASSWORD"),
+		DB:       r.GetInt("REDIS_DB"),
 	}
-	pass, err := GetEnvVar("REDIS_PASSWORD")
-	if err != nil {
-		return nil, err
+
+	if r.err != nil {
+		return nil, r.err
 	}
-	db, err := GetEnvVarInt("REDIS_DB")
-	if err != nil {
-		return nil, err
+
+	return &conf, nil
+}
+
+func GetRedisChannelsConfig() (*RedisChannelsConfig, error) {
+	r := NewConfigReader()
+
+	conf := RedisChannelsConfig{
+		UserStatusPattern: r.GetString("REDIS_USER_STATUS_PATTERN"),
+		UserEventsPattern: r.GetString("REDIS_USER_EVENTS_PATTERN"),
+		UserBanChannel:    r.GetString("REDIS_USER_BAN_CHANNEL"),
+		ChatEventsPattern: r.GetString("REDIS_CHAT_EVENTS_PATTERN"),
 	}
-	return &RedisConfig{
-		Address:  addr,
-		Password: pass,
-		DB:       db,
-	}, nil
+
+	if r.err != nil {
+		return nil, r.err
+	}
+
+	return &conf, nil
 }
