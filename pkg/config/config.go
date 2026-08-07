@@ -61,3 +61,15 @@ func GetEnvVarDuration(key string) (time.Duration, error) {
 	}
 	return dur, nil
 }
+
+func GetEnvVarFloat64(key string) (float64, error) {
+	val, err := GetEnvVar(key)
+	if err != nil {
+		return -1, err
+	}
+	fVal, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		return -1, err
+	}
+	return fVal, nil
+}
