@@ -41,7 +41,7 @@ func (s *RedisSubscriber) subscribe(ctx context.Context, sub *redis.PubSub) (<-c
 	cancel := func() {
 		err := sub.Close()
 		if err != nil {
-			log.Printf("Subscribe: Failed to close pub, err: %q", err.Error())
+			log.Printf("Subscribe: Failed to close sub, err: %q", err.Error())
 		}
 	}
 
