@@ -22,38 +22,22 @@ type MessageConfig struct {
 }
 
 func GetMessageConfig() (*MessageConfig, error) {
-	var (
-		conf MessageConfig
-		err  error
-	)
+	r := config.NewConfigReader()
 
-	get := func(envKey string) int {
-		if err != nil {
-			return 0
-		}
-		var val int
-		val, err = config.GetEnvVarInt(envKey)
-		return val
+	conf := MessageConfig{
+		MinNameLen:     r.GetInt("MIN_NAME_LEN"),
+		MaxNameLen:     r.GetInt("MAX_NAME_LEN"),
+		MinUserNameLen: r.GetInt("MIN_USERNAME_LEN"),
+		MaxUserNameLen: r.GetInt("MAX_USERNAME_LEN"),
+		MinMsgLen:      r.GetInt("MIN_MSG_LEN"),
+		MaxMsgLen:      r.GetInt("MAX_MSG_LEN"),
+		MinKeysLen:     r.GetInt("MIN_KEYS_LEN"),
+		MaxPubKeyLen:   r.GetInt("MAX_PUBKEY_LEN"),
+		MaxPrvKeyLen:   r.GetInt("MAX_PRVKEY_LEN"),
+		MaxSaltLen:     r.GetInt("MAX_SALT_LEN"),
+		MinQuantity:    r.GetInt("MIN_QUANTITY_QUERIES"),
+		MaxQuantity:    r.GetInt("MAX_QUANTITY_QUERIES"),
 	}
 
-	conf = MessageConfig{
-		MinNameLen:     get("MIN_NAME_LEN"),
-		MaxNameLen:     get("MAX_NAME_LEN"),
-		MinUserNameLen: get("MIN_USERNAME_LEN"),
-		MaxUserNameLen: get("MAX_USERNAME_LEN"),
-		MinMsgLen:      get("MIN_MSG_LEN"),
-		MaxMsgLen:      get("MAX_MSG_LEN"),
-		MinKeysLen:     get("MIN_KEYS_LEN"),
-		MaxPubKeyLen:   get("MAX_PUBKEY_LEN"),
-		MaxPrvKeyLen:   get("MAX_PRVKEY_LEN"),
-		MaxSaltLen:     get("MAX_SALT_LEN"),
-		MinQuantity:    get("MIN_QUANTITY_QUERIES"),
-		MaxQuantity:    get("MAX_QUANTITY_QUERIES"),
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &conf, nil
+	return &conf, r.Err()
 }

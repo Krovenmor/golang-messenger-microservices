@@ -2,7 +2,7 @@ package infra
 
 import (
 	"MyMessenger/pkg/broker"
-	"MyMessenger/services/status/internal/config"
+	"MyMessenger/pkg/config"
 	"MyMessenger/services/status/internal/service"
 	"context"
 	"fmt"
@@ -18,8 +18,8 @@ type RedisRepo struct {
 	pattern string
 }
 
-func NewRedisRepo(rdClient *redis.Client, conf *config.SubInfoConfig) *RedisRepo {
-	return &RedisRepo{rd: rdClient, pattern: conf.SubPattern}
+func NewRedisRepo(rdClient *redis.Client, conf *config.RedisChannelsConfig) *RedisRepo {
+	return &RedisRepo{rd: rdClient, pattern: conf.UserStatusPattern}
 }
 
 func (r *RedisRepo) ToKey(userId string) string {

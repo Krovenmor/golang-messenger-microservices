@@ -2,8 +2,8 @@ package redis
 
 import (
 	"MyMessenger/pkg/broker"
+	"MyMessenger/pkg/config"
 	"MyMessenger/pkg/redis"
-	"MyMessenger/services/msg/internal/config"
 	"context"
 	"fmt"
 
@@ -16,11 +16,11 @@ type publisher struct {
 	pubChatPattern string
 }
 
-func NewPublisher(pub *redis.RedisPublisher, conf *config.RedisPatternConfig) (*publisher, error) {
+func NewPublisher(pub *redis.RedisPublisher, conf *config.RedisChannelsConfig) (*publisher, error) {
 	return &publisher{
 		pub:            pub,
-		pubUserPattern: conf.PubUserPattern,
-		pubChatPattern: conf.PubChatPattern,
+		pubUserPattern: conf.UserEventsPattern,
+		pubChatPattern: conf.ChatEventsPattern,
 	}, nil
 }
 

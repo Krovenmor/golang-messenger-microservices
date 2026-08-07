@@ -26,8 +26,8 @@ func GetModule() fx.Option {
 		fx.Provide(
 			stdconfig.GetRepoConfig,
 			stdconfig.GetServConfig,
+			stdconfig.GetRedisChannelsConfig,
 			config.GetMessageConfig,
-			config.GetRedisPatternConfig,
 		),
 
 		// Pool

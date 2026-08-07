@@ -2,7 +2,7 @@ package event
 
 import (
 	"MyMessenger/pkg/broker"
-	"MyMessenger/services/status/internal/config"
+	"MyMessenger/pkg/config"
 	"MyMessenger/services/status/internal/service"
 	"context"
 	"encoding/json"
@@ -24,11 +24,11 @@ type Consumer struct {
 	wg         sync.WaitGroup
 }
 
-func NewConsumer(stService service.StatusService, sub Subscriber, conf *config.SubInfoConfig) *Consumer {
+func NewConsumer(stService service.StatusService, sub Subscriber, conf *config.RedisChannelsConfig) *Consumer {
 	return &Consumer{
 		stService:  stService,
 		sub:        sub,
-		subChannel: fmt.Sprintf(conf.SubPattern, "*"),
+		subChannel: fmt.Sprintf(conf.UserStatusPattern, "*"),
 	}
 }
 

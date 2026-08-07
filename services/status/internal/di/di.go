@@ -29,8 +29,8 @@ func GetModule() fx.Option {
 		// Configs
 		fx.Provide(
 			stdconfig.GetServConfig,
+			stdconfig.GetRedisChannelsConfig,
 			config.GetServiceConfig,
-			config.GetSubInfoConfig,
 		),
 
 		// Repo
