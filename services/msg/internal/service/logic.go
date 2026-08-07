@@ -4,13 +4,12 @@ import (
 	"MyMessenger/services/msg/internal/config"
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/google/uuid"
 )
 
 var (
-	ErrAlreadyExists = fmt.Errorf("Already Exists")
+	ErrAlreadyExists = fmt.Errorf("already Exists")
 )
 
 type MessageServiceImpl struct {
@@ -81,12 +80,7 @@ func (m *MessageServiceImpl) PostMessage(ctx context.Context, chatId uuid.UUID, 
 	if err != nil {
 		return uuid.Nil, err
 	}
-	membersToNotify, err := m.repo.GetChatMembersIdsExcept(ctx, chatId, msg.SenderId)
-	if err == nil {
-		m.pub.PublishNewMessage(ctx, chatId, msgId, membersToNotify)
-	} else {
-		log.Printf("PostMessage(): Trouble with GetChatMembersIdsExcept(), err: %q", err.Error())
-	}
+	m.pub.PublishNewMessage(ctx, chatId, msgId)
 	return msgId, nil
 }
 
@@ -102,12 +96,7 @@ func (m *MessageServiceImpl) RedactMessage(ctx context.Context, chatId, msgId, u
 	if err != nil {
 		return err
 	}
-	membersToNotify, err := m.repo.GetChatMembersIdsExcept(ctx, chatId, userId)
-	if err == nil {
-		m.pub.PublishMessageWasRedacted(ctx, chatId, msgId, membersToNotify)
-	} else {
-		log.Printf("RedactMessage(): Trouble with GetChatMembersIdsExcept(), err: %q", err.Error())
-	}
+	m.pub.PublishMessageWasRedacted(ctx, chatId, msgId)
 	return nil
 }
 
@@ -116,12 +105,7 @@ func (m *MessageServiceImpl) DelMessage(ctx context.Context, chatId, msgId, user
 	if err != nil {
 		return err
 	}
-	membersToNotify, err := m.repo.GetChatMembersIdsExcept(ctx, chatId, userId)
-	if err == nil {
-		m.pub.PublishMessageWasDeleted(ctx, chatId, msgId, membersToNotify)
-	} else {
-		log.Printf("DelMessage(): Trouble with GetChatMembersIdsExcept(), err: %q", err.Error())
-	}
+	m.pub.PublishMessageWasDeleted(ctx, chatId, msgId)
 	return nil
 }
 

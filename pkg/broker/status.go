@@ -13,11 +13,15 @@ const (
 	MaxStatus
 )
 
+const (
+	StatusEvent EventType = "status"
+)
+
 func IsValidStatus(s Status) bool {
 	return s > MinStatus && s < MaxStatus
 }
 
-type StatusEvent struct {
+type StatusPayload struct {
 	UserId    string `json:"userId"`
 	Status    Status `json:"newStatus"`
 	EventTime int64  `json:"eventTime"`
