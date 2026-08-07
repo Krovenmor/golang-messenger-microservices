@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	ErrWrongStatus   = errors.New("Wrong status")
-	ErrSavingTrouble = errors.New("Trouble with saving")
+	ErrWrongStatus   = errors.New("wrong status")
+	ErrSavingTrouble = errors.New("trouble with saving")
 )
 
 var defaultUserStatus = UserStatus{Status: broker.Offline, LastSeen: 0}
@@ -33,7 +33,7 @@ func (s *statusService) GetStatus(ctx context.Context, userId string) UserStatus
 	return *status
 }
 
-func (s *statusService) SaveStatus(ctx context.Context, event broker.StatusEvent) error {
+func (s *statusService) SaveStatus(ctx context.Context, event broker.StatusPayload) error {
 	if !broker.IsValidStatus(event.Status) {
 		return ErrWrongStatus
 	}

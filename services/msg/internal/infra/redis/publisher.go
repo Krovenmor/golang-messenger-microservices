@@ -5,20 +5,27 @@ import (
 	"MyMessenger/pkg/redis"
 	"MyMessenger/services/msg/internal/config"
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 )
 
 type publisher struct {
-	pub        *redis.RedisPublisher
-	pubPattern string
+	pub            *redis.RedisPublisher
+	pubUserPattern string
+	pubChatPattern string
 }
 
 func NewPublisher(pub *redis.RedisPublisher, conf *config.RedisPatternConfig) (*publisher, error) {
 	return &publisher{
-		pub:        pub,
-		pubPattern: conf.PubPattern,
+		pub:            pub,
+		pubUserPattern: conf.PubUserPattern,
+		pubChatPattern: conf.PubChatPattern,
 	}, nil
+}
+
+func (p *publisher) toChat(chatId uuid.UUID) string {
+	return fmt.Sprintf(p.pubChatPattern, chatId.String())
 }
 
 func (p *publisher) PublishNewChat(ctx context.Context, chatId uuid.UUID, usersTo []uuid.UUID) {
@@ -28,10 +35,10 @@ func (p *publisher) PublishNewChat(ctx context.Context, chatId uuid.UUID, usersT
 			ChatId: chatId.String(),
 		},
 	}
-	redis.PublishEventToGroup(ctx, p.pub, p.pubPattern, event, usersTo)
+	redis.PublishEventToGroup(ctx, p.pub, p.pubUserPattern, event, usersTo)
 }
 
-func (p *publisher) PublishNewMessage(ctx context.Context, chatId, msgId uuid.UUID, usersTo []uuid.UUID) {
+func (p *publisher) PublishNewMessage(ctx context.Context, chatId, msgId uuid.UUID) {
 	event := broker.Event{
 		Type: broker.NewMessageType,
 		Payload: broker.NewMessagePayload{
@@ -39,10 +46,10 @@ func (p *publisher) PublishNewMessage(ctx context.Context, chatId, msgId uuid.UU
 			MsgId:  msgId.String(),
 		},
 	}
-	redis.PublishEventToGroup(ctx, p.pub, p.pubPattern, event, usersTo)
+	p.pub.PublishEvent(ctx, p.toChat(chatId), event)
 }
 
-func (p *publisher) PublishMessageWasRedacted(ctx context.Context, chatId, msgId uuid.UUID, usersTo []uuid.UUID) {
+func (p *publisher) PublishMessageWasRedacted(ctx context.Context, chatId, msgId uuid.UUID) {
 	event := broker.Event{
 		Type: broker.MessageRedactedType,
 		Payload: broker.MessageRedactedPayload{
@@ -50,10 +57,10 @@ func (p *publisher) PublishMessageWasRedacted(ctx context.Context, chatId, msgId
 			MsgId:  msgId.String(),
 		},
 	}
-	redis.PublishEventToGroup(ctx, p.pub, p.pubPattern, event, usersTo)
+	p.pub.PublishEvent(ctx, p.toChat(chatId), event)
 }
 
-func (p *publisher) PublishMessageWasDeleted(ctx context.Context, chatId, msgId uuid.UUID, usersTo []uuid.UUID) {
+func (p *publisher) PublishMessageWasDeleted(ctx context.Context, chatId, msgId uuid.UUID) {
 	event := broker.Event{
 		Type: broker.MessageDeletedType,
 		Payload: broker.MessageDeletedPayload{
@@ -61,5 +68,5 @@ func (p *publisher) PublishMessageWasDeleted(ctx context.Context, chatId, msgId 
 			MsgId:  msgId.String(),
 		},
 	}
-	redis.PublishEventToGroup(ctx, p.pub, p.pubPattern, event, usersTo)
+	p.pub.PublishEvent(ctx, p.toChat(chatId), event)
 }

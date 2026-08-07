@@ -43,17 +43,17 @@ func (j *JWTChecker) IsValidToken(cToken string) (*TokenClaims, error) {
 
 	token, err := jwt.ParseWithClaims(cToken, claims, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", t.Header["alg"])
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return j.pubKey, nil
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("Invalid token: %w", err)
+		return nil, fmt.Errorf("invalid token: %w", err)
 	}
 
 	if !token.Valid {
-		return nil, fmt.Errorf("Token is not valid")
+		return nil, fmt.Errorf("token is not valid")
 	}
 
 	return claims, nil
@@ -65,7 +65,7 @@ func (j *JWTChecker) IsValidAccess(aToken string) (*TokenClaims, error) {
 		return nil, err
 	}
 	if claims.Ttype != Access {
-		return nil, fmt.Errorf("It's not an Access Token!")
+		return nil, fmt.Errorf("not an Access Token")
 	}
 	return claims, nil
 }

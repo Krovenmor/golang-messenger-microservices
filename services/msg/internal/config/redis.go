@@ -3,15 +3,21 @@ package config
 import "MyMessenger/pkg/config"
 
 type RedisPatternConfig struct {
-	PubPattern string
+	PubUserPattern string
+	PubChatPattern string
 }
 
 func GetRedisPatternConfig() (*RedisPatternConfig, error) {
-	pub, err := config.GetEnvVar("REDIS_PUB_PATTERN")
+	pubUser, err := config.GetEnvVar("REDIS_PUB_USER_PATTERN")
+	if err != nil {
+		return nil, err
+	}
+	pubChat, err := config.GetEnvVar("REDIS_PUB_CHAT_PATTERN")
 	if err != nil {
 		return nil, err
 	}
 	return &RedisPatternConfig{
-		PubPattern: pub,
+		PubUserPattern: pubUser,
+		PubChatPattern: pubChat,
 	}, nil
 }

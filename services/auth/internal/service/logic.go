@@ -42,17 +42,17 @@ func NewAuth(repo AuthRepo, conf config.AuthConfig) *AuthServiceImpl {
 func (a *AuthServiceImpl) checkLoginPass(login, password string) error {
 	lLen := len(login)
 	if lLen < a.conf.MinLoginLength {
-		return fmt.Errorf("Login is too short, min len: %d", a.conf.MinLoginLength)
+		return fmt.Errorf("login is too short, min len: %d", a.conf.MinLoginLength)
 	}
 	if lLen > a.conf.MaxLoginLength {
-		return fmt.Errorf("Login is too big, max len: %d", a.conf.MaxLoginLength)
+		return fmt.Errorf("login is too big, max len: %d", a.conf.MaxLoginLength)
 	}
 	pLen := len(password)
 	if pLen < a.conf.MinPassLength {
-		return fmt.Errorf("Password is too short, min len: %d", a.conf.MinPassLength)
+		return fmt.Errorf("password is too short, min len: %d", a.conf.MinPassLength)
 	}
 	if pLen > a.conf.MaxPassLength {
-		return fmt.Errorf("Password is too big, max len: %d", a.conf.MaxPassLength)
+		return fmt.Errorf("password is too big, max len: %d", a.conf.MaxPassLength)
 	}
 	return nil
 }

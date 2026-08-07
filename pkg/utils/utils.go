@@ -39,11 +39,11 @@ func Recv[T any](r *http.Request) (*T, error) {
 	dec.DisallowUnknownFields()
 	err := dec.Decode(&val)
 	if err != nil {
-		return nil, fmt.Errorf("Not valid JSON: %w", err)
+		return nil, fmt.Errorf("not valid JSON: %w", err)
 	}
 	err = validate.Struct(&val)
 	if err != nil {
-		return nil, fmt.Errorf("Not valid JSON: %w", err)
+		return nil, fmt.Errorf("not valid JSON: %w", err)
 	}
 	return &val, nil
 }
@@ -62,11 +62,11 @@ func GetUuidFromContext(r *http.Request) (uuid.UUID, error) {
 func GetUuidFromPath(r *http.Request, key string) (uuid.UUID, error) {
 	UUID := r.PathValue(key)
 	if UUID == "" {
-		return uuid.Nil, fmt.Errorf("Empty %q UUID", key)
+		return uuid.Nil, fmt.Errorf("empty %q UUID", key)
 	}
 	cUUID, err := uuid.Parse(UUID)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("Bad %q UUID", key)
+		return uuid.Nil, fmt.Errorf("bad %q UUID", key)
 	}
 	return cUUID, nil
 }

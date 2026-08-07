@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"log"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -22,7 +23,12 @@ func MakeMigrations(pool *pgxpool.Pool, migrations *embed.FS) error {
 	if db == nil {
 		return fmt.Errorf("MakeMigrations(): trouble with OpenDBFromPool")
 	}
-	defer db.Close()
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			log.Printf("Trouble with db.Close(), err: %q", err)
+		}
+	}()
 
 	goose.SetBaseFS(*migrations)
 	err := goose.SetDialect("postgres")

@@ -63,7 +63,7 @@ func (p *PostagreRepo) AddNewUser(ctx context.Context, userId uuid.UUID, login, 
 		return betterError(err)
 	}
 	if c.RowsAffected() == 0 {
-		return fmt.Errorf("Can't add new user")
+		return fmt.Errorf("can't add new user")
 	}
 	return nil
 }
@@ -83,7 +83,7 @@ func (p *PostagreRepo) SaveRefresh(ctx context.Context, userId uuid.UUID, rToken
 		return betterError(err)
 	}
 	if c.RowsAffected() == 0 {
-		return fmt.Errorf("Can't save refresh")
+		return fmt.Errorf("can't save refresh")
 	}
 	return nil
 }
@@ -103,7 +103,7 @@ func (p *PostagreRepo) DeleteRefresh(ctx context.Context, userId uuid.UUID, rTok
 		return err
 	}
 	if c.RowsAffected() == 0 {
-		return fmt.Errorf("Can't del refresh")
+		return fmt.Errorf("can't del refresh")
 	}
 	return nil
 }

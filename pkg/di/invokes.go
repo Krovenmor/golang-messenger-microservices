@@ -22,7 +22,12 @@ func InvokeServer(lf fx.Lifecycle, conf config.ServConfig, h http.Handler) {
 				return err
 			}
 			log.Printf("Server started on %q", serv.Addr)
-			go serv.Serve(l)
+			go func() {
+				err := serv.Serve(l)
+				if err != nil {
+					log.Printf("Trouble with serv.Serve(l), err: %q", err)
+				}
+			}()
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {

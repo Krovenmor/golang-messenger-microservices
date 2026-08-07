@@ -31,6 +31,7 @@ func (p *RedisPublisher) PublishEvent(ctx context.Context, channel string, event
 		log.Printf("PublishEvent: trouble with Publishing event:%v, err:%q, to:%q", event, err.Error(), channel)
 		return err
 	}
+	log.Printf("PublishEvent: Publish to ch: %q", channel)
 	return nil
 }
 
@@ -52,10 +53,11 @@ func PublishEventToGroup[T WithString](ctx context.Context, p *RedisPublisher, p
 	_, err = p.rdClient.Pipelined(ctx, func(pipe redis.Pipeliner) error {
 		for _, arg := range group {
 			channel := fmt.Sprintf(pattern, arg.String())
-			log.Printf("Publish to ch: %q", channel)
 			err := pipe.Publish(ctx, channel, data).Err()
 			if err != nil {
-				log.Printf("Publish err")
+				log.Printf("PublishEventToGroup: Publish err:%q, to ch: %q", err, channel)
+			} else {
+				log.Printf("PublishEventToGroup: Publish to ch: %q", channel)
 			}
 		}
 		return nil
