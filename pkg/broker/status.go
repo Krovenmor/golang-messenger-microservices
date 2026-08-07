@@ -21,6 +21,11 @@ func IsValidStatus(s Status) bool {
 	return s > MinStatus && s < MaxStatus
 }
 
+type StatusEventDTO struct {
+	Type    EventType     `json:"type"`
+	Payload StatusPayload `json:"payload"`
+}
+
 type StatusPayload struct {
 	UserId    string `json:"userId"`
 	Status    Status `json:"newStatus"`
