@@ -13,6 +13,7 @@ require (
 	github.com/redis/go-redis/v9 v9.21.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/fx v1.24.0
+	go.uber.org/goleak v1.3.0
 )
 
 require (
