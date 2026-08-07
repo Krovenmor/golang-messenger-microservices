@@ -24,7 +24,7 @@ func GetServiceConfig() (*ServiceConfig, error) {
 }
 
 func GetSubInfoConfig() (*SubInfoConfig, error) {
-	prefix, err := config.GetEnvVar("REDIS_SUB_PATTERN")
+	prefix, err := config.GetEnvVar("REDIS_USER_STATUS_PATTERN")
 	if err != nil {
 		return nil, err
 	}

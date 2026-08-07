@@ -8,11 +8,11 @@ type RedisPatternConfig struct {
 }
 
 func GetRedisPatternConfig() (*RedisPatternConfig, error) {
-	pubUser, err := config.GetEnvVar("REDIS_PUB_USER_PATTERN")
+	pubUser, err := config.GetEnvVar("REDIS_USER_EVENTS_PATTERN")
 	if err != nil {
 		return nil, err
 	}
-	pubChat, err := config.GetEnvVar("REDIS_PUB_CHAT_PATTERN")
+	pubChat, err := config.GetEnvVar("REDIS_CHAT_EVENTS_PATTERN")
 	if err != nil {
 		return nil, err
 	}

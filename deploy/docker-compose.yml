@@ -28,6 +28,8 @@ services:
       - POSTGRES_PASSWORD=auth_pass
     volumes:
       - auth_db_data:/var/lib/data
+    ports:
+      - "5431:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
       interval: 3s
@@ -42,6 +44,8 @@ services:
       - POSTGRES_PASSWORD=msg_pass
     volumes:
       - msg_db_data:/var/lib/data
+    ports:
+      - "5430:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U msg_user -d msg_db"]
       interval: 3s
@@ -56,18 +60,9 @@ services:
     build:
       context: ..
       dockerfile: services/auth/Dockerfile
-    environment:
-      - JWT_PRVKEY_PATH=/app/certs/jwt/private.key
-      - JWT_PUBKEY_PATH=/app/certs/jwt/public.key
-      - JWT_ACCESS_TTL=30m
-      - JWT_REFRESH_TTL=720h
-      - MIN_PASS_LENGTH=5
-      - MAX_PASS_LENGTH=20
-      - MIN_LOGIN_LENGTH=5
-      - MAX_LOGIN_LENGTH=20
-      - DB_CONN_STRING=postgres://auth_user:auth_pass@auth-db:5432/auth_db
-      - LISTEN_ADDRESS=0.0.0.0
-      - LISTEN_PORT=8081
+    env_file:
+      - ../config/common.env
+      - ../config/auth.env
     depends_on:
       auth-db:
         condition: service_healthy
@@ -78,28 +73,10 @@ services:
     build:
       context: ..
       dockerfile: services/msg/Dockerfile
-    environment:
-      - JWT_PUBKEY_PATH=/app/certs/jwt/public.key
-      - DB_CONN_STRING=postgres://msg_user:msg_pass@msg-db:5432/msg_db
-      - LISTEN_ADDRESS=0.0.0.0
-      - LISTEN_PORT=8082
-      - REDIS_ADDRESS=redis-db:6379
-      - REDIS_PASSWORD=""
-      - REDIS_DB=0
-      - REDIS_PUB_USER_PATTERN=user:%s:events
-      - REDIS_PUB_CHAT_PATTERN=chat:%s:events
-      - MIN_NAME_LEN=5
-      - MAX_NAME_LEN=50
-      - MIN_USERNAME_LEN=5
-      - MAX_USERNAME_LEN=50
-      - MIN_MSG_LEN=1
-      - MAX_MSG_LEN=500
-      - MIN_KEYS_LEN=10
-      - MAX_PUBKEY_LEN=1000
-      - MAX_PRVKEY_LEN=2000
-      - MAX_SALT_LEN=255
-      - MIN_QUANTITY_QUERIES=1
-      - MAX_QUANTITY_QUERIES=100
+    env_file:
+      - ../config/common.env
+      - ../config/redis_channels.env
+      - ../config/msg.env
     depends_on:
       msg-db:
         condition: service_healthy
@@ -112,19 +89,10 @@ services:
     build: 
       context: ..
       dockerfile: services/ws/Dockerfile
-    environment:
-      - JWT_PUBKEY_PATH=/app/certs/jwt/public.key
-      - LISTEN_ADDRESS=0.0.0.0
-      - LISTEN_PORT=8083
-      - REDIS_ADDRESS=redis-db:6379
-      - REDIS_PASSWORD=""
-      - REDIS_DB=0
-      - REDIS_PUB_PATTERN=user:%s:status
-      - REDIS_SUB_USER_PATTERN=user:%s:events
-      - REDIS_SUB_CHAT_PATTERN=chat:%s:events
-      - WS_READ_LIMIT=1024
-      - MSG_URL=http://msg-service:8082
-      - MSG_GET_CHATS_PATH=/api/msg/profile/chats
+    env_file:
+      - ../config/common.env
+      - ../config/redis_channels.env
+      - ../config/ws.env
     depends_on:
       redis-db:
         condition: service_healthy
@@ -135,15 +103,10 @@ services:
     build: 
       context: ..
       dockerfile: services/status/Dockerfile
-    environment:
-      - JWT_PUBKEY_PATH=/app/certs/jwt/public.key
-      - LISTEN_ADDRESS=0.0.0.0
-      - LISTEN_PORT=8084
-      - REDIS_ADDRESS=redis-db:6379
-      - REDIS_PASSWORD=""
-      - REDIS_DB=0
-      - REDIS_STATUSES_TTL=5m 
-      - REDIS_SUB_PATTERN=user:%s:status
+    env_file:
+      - ../config/common.env
+      - ../config/redis_channels.env
+      - ../config/status.env
     depends_on:
       redis-db:
         condition: service_healthy
@@ -167,14 +130,9 @@ services:
       dockerfile: services/gateway/Dockerfile
     ports:
       - "8080:8080"
-    environment:
-      - LISTEN_ADDRESS=0.0.0.0
-      - LISTEN_PORT=8080
-      - AUTH_URL=http://auth-service:8081
-      - MSG_URL=http://msg-service:8082
-      - WS_URL=http://ws-service:8083
-      - STAT_URL=http://status-service:8084
-      - WEB_URL=http://web-service:80
+    env_file:
+      - ../config/common.env
+      - ../config/gateway.env
 
 volumes:
   auth_db_data:
