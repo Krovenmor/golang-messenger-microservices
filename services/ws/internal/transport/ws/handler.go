@@ -13,6 +13,10 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	ErrWebSocTooManyReq = 4001
+)
+
 type WSHandler struct {
 	wsService service.WsService
 	readLimit int64
@@ -21,7 +25,7 @@ type WSHandler struct {
 func NewWSHandler(wsService service.WsService, conf *config.WsConfig) *WSHandler {
 	return &WSHandler{
 		wsService: wsService,
-		readLimit: conf.WsReadLimit,
+		readLimit: conf.ReadLimit,
 	}
 }
 
@@ -47,6 +51,10 @@ func (h *WSHandler) HandleConnection(w http.ResponseWriter, r *http.Request, use
 		case errors.Is(err, service.ErrUnauthorized):
 			connCloseCode = websocket.StatusPolicyViolation
 			connCloseMsg = "unauthorized"
+
+		case errors.Is(err, service.ErrTooManyRequests):
+			connCloseCode = ErrWebSocTooManyReq
+			connCloseMsg = "too many requests"
 
 		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
 			connCloseCode = websocket.StatusGoingAway

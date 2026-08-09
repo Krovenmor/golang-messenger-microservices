@@ -1,8 +1,8 @@
 package infra
 
 import (
+	"MyMessenger/pkg/config"
 	"MyMessenger/pkg/redis"
-	"MyMessenger/services/ws/internal/config"
 	"context"
 	"fmt"
 	"log"
@@ -17,12 +17,12 @@ type RedisSubscriber struct {
 	chatReader *chatsReader
 }
 
-func NewSubscriber(sub *redis.RedisSubscriber, conf *config.RedisPatternConfig) *RedisSubscriber {
+func NewSubscriber(sub *redis.RedisSubscriber, conf *config.RedisChannelsConfig) *RedisSubscriber {
 	rSub := &RedisSubscriber{
 		sub:               sub,
-		userPattern:       conf.SubUserPattern,
-		chatPattern:       conf.SubChatPattern,
-		userStatusPattern: conf.PubPattern,
+		userPattern:       conf.UserEventsPattern,
+		chatPattern:       conf.ChatEventsPattern,
+		userStatusPattern: conf.UserStatusPattern,
 	}
 	rSub.chatReader = newChatsReader(rSub)
 	return rSub

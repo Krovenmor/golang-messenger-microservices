@@ -2,6 +2,7 @@ package service
 
 import (
 	"MyMessenger/pkg/broker"
+	"MyMessenger/services/ws/internal/config"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -12,14 +13,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/time/rate"
 )
 
 const (
 	bufferLength     = 10
 	respBufferLength = 2
-
-	contextWaitTime = time.Second * 3
-	tickerTiming    = time.Second * 10
 )
 
 type wsWorker struct {
@@ -38,11 +37,13 @@ type wsWorker struct {
 
 	userCancel context.CancelFunc
 
-	userId            string
+	userId            uuid.UUID
 	currentUserStatus broker.Status
+
+	conf *config.WsConfig
 }
 
-func newWsWorker(sub Subscriber, pub Publisher, msgClient MessageClient, conn Connector) *wsWorker {
+func newWsWorker(sub Subscriber, pub Publisher, msgClient MessageClient, conn Connector, conf *config.WsConfig) *wsWorker {
 
 	eventsChannel := make(chan []byte, bufferLength)
 
@@ -57,6 +58,8 @@ func newWsWorker(sub Subscriber, pub Publisher, msgClient MessageClient, conn Co
 		respWriteChannel: make(chan []byte, respBufferLength),
 		eventsChannel:    eventsChannel,
 		eventsClose:      func() { close(eventsChannel) },
+
+		conf: conf,
 	}
 }
 
@@ -84,8 +87,10 @@ func (s *wsWorker) writeToMain(ch <-chan []byte, cancel func()) {
 }
 
 func (s *wsWorker) subAll(accessToken string) error {
-	ctx, caneclCtx := context.WithTimeout(s.ctx, contextWaitTime)
-	chats, err := s.msgClient.GetAllUserChats(ctx, s.userId, accessToken)
+	userString := s.userId.String()
+
+	ctx, caneclCtx := context.WithTimeout(s.ctx, s.conf.ContextWaitTime)
+	chats, err := s.msgClient.GetAllUserChats(ctx, userString, accessToken)
 	caneclCtx()
 
 	if err != nil {
@@ -93,7 +98,7 @@ func (s *wsWorker) subAll(accessToken string) error {
 		return err
 	}
 
-	chUserEvents, cancelEvents, err := s.sub.SubscribeOnUserEvents(s.ctx, s.userId)
+	chUserEvents, cancelEvents, err := s.sub.SubscribeOnUserEvents(s.ctx, userString)
 	if err != nil {
 		log.Printf("trouble with Subscribe, err: %q", err)
 		return ErrInternal
@@ -120,12 +125,12 @@ func (s *wsWorker) changeStatus(newStatus broker.Status) {
 	if ctx.Err() != nil {
 		log.Printf("changeStatus: context gone...")
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(context.Background(), contextWaitTime)
+		ctx, cancel = context.WithTimeout(context.Background(), s.conf.ContextWaitTime)
 		defer cancel()
 	}
 
 	s.pub.PublishUserStatus(ctx, broker.StatusPayload{
-		UserId:    s.userId,
+		UserId:    s.userId.String(),
 		Status:    newStatus,
 		EventTime: time.Now().Unix(),
 	})
@@ -219,13 +224,30 @@ func (s *wsWorker) isNormalError(err error) bool {
 	return false
 }
 
+func (s *wsWorker) banUser() {
+	s.pub.PublishBanEvent(s.ctx, broker.BanEventPayload{
+		UserId: s.userId,
+		Reason: broker.TooManyRequests,
+	})
+}
+
 func (s *wsWorker) startReader() error {
 	defer s.ctxCancel()
+
+	limiter := rate.NewLimiter(rate.Limit(s.conf.LimitRate), s.conf.LimitBurst)
+	violations := 0
 
 	for {
 		t, data, err := s.conn.Read(s.ctx)
 		if err != nil {
 			return err
+		}
+		if !limiter.Allow() {
+			violations++
+			if violations > s.conf.LimitViolations {
+				s.banUser()
+				return ErrTooManyRequests
+			}
 		}
 		if t == TextType {
 			req, unmarshalErr := unmarshalJson[Request](data)
@@ -255,7 +277,7 @@ func (s *wsWorker) writeMessage(msg []byte) error {
 func (s *wsWorker) startWriter() error {
 	defer s.ctxCancel()
 
-	ticker := time.NewTicker(tickerTiming)
+	ticker := time.NewTicker(s.conf.TickerTiming)
 	defer ticker.Stop()
 
 	for {
@@ -284,7 +306,7 @@ func (s *wsWorker) startWriter() error {
 			}
 
 		case <-ticker.C:
-			ctxWithTime, cancelCTX := context.WithTimeout(s.ctx, contextWaitTime)
+			ctxWithTime, cancelCTX := context.WithTimeout(s.ctx, s.conf.ContextWaitTime)
 			err := s.conn.Ping(ctxWithTime)
 			cancelCTX()
 			if err != nil {
@@ -299,7 +321,7 @@ func (s *wsWorker) startWriter() error {
 }
 
 func (s *wsWorker) startAll(ctx context.Context, accessToken string, userId uuid.UUID) error {
-	s.userId = userId.String()
+	s.userId = userId
 	ctxL, cancel := context.WithCancel(ctx)
 	defer cancel()
 	defer s.eventsClose()

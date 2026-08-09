@@ -31,7 +31,7 @@ func GetModule() fx.Option {
 		// Configs
 		fx.Provide(
 			stdconfig.GetServConfig,
-			config.GetRedisPatternConfig,
+			stdconfig.GetRedisChannelsConfig,
 			config.GetWsConfig,
 			config.GetMsgClientConfig,
 		),

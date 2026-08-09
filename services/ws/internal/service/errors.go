@@ -7,4 +7,5 @@ var (
 	ErrUnauthorized      = errors.New("unauthorized")
 	ErrInternal          = errors.New("internal")
 	ErrConnNormalClosure = errors.New("normal closure")
+	ErrTooManyRequests   = errors.New("too many reqs")
 )

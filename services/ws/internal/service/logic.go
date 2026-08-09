@@ -1,6 +1,7 @@
 package service
 
 import (
+	"MyMessenger/services/ws/internal/config"
 	"context"
 	"log"
 	"sync"
@@ -16,13 +17,16 @@ type wsService struct {
 
 	connCounter atomic.Int64
 	connMap     sync.Map
+
+	workerConf *config.WsConfig
 }
 
-func NewWsService(sub Subscriber, pub Publisher, msgClient MessageClient) *wsService {
+func NewWsService(sub Subscriber, pub Publisher, msgClient MessageClient, conf *config.WsConfig) *wsService {
 	return &wsService{
-		sub:       sub,
-		pub:       pub,
-		msgClient: msgClient,
+		sub:        sub,
+		pub:        pub,
+		msgClient:  msgClient,
+		workerConf: conf,
 	}
 }
 
@@ -50,6 +54,6 @@ func (s *wsService) StartService(ctx context.Context, conn Connector, userId uui
 	endLog := s.startLog(userId)
 	defer endLog()
 
-	worker := newWsWorker(s.sub, s.pub, s.msgClient, conn)
+	worker := newWsWorker(s.sub, s.pub, s.msgClient, conn, s.workerConf)
 	return worker.startAll(ctx, accessToken, userId)
 }
