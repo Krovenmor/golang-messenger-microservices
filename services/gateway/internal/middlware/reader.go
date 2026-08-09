@@ -18,7 +18,7 @@ type reader struct {
 	channel string
 }
 
-func registerReader(lf fx.Lifecycle, sub Subscriber, channel string, repo MiddlewareRepo, calcTime func(reason BanReason) time.Time) {
+func registerReader(lf fx.Lifecycle, sub Subscriber, channel string, repo MiddlewareRepo, calcTime func(reason BanReason) time.Duration) {
 	r := &reader{repo: repo, channel: channel}
 
 	ctxC, ctxCancel := context.WithCancel(context.Background())
@@ -44,7 +44,7 @@ func registerReader(lf fx.Lifecycle, sub Subscriber, channel string, repo Middle
 	})
 }
 
-func (r *reader) startReader(ctx context.Context, calcTime func(reason BanReason) time.Time) {
+func (r *reader) startReader(ctx context.Context, calcTime func(reason BanReason) time.Duration) {
 	log.Printf("Reader started on %q", r.channel)
 	defer log.Printf("Reader stopped on %q", r.channel)
 
@@ -65,7 +65,7 @@ func (r *reader) startReader(ctx context.Context, calcTime func(reason BanReason
 				continue
 			}
 			reason := FromBroker(event.Payload.Reason)
-			r.repo.Put(event.Payload.UserId, calcTime(reason))
+			r.repo.Put(ctx, event.Payload.UserId.String(), calcTime(reason))
 			log.Printf("reader: new ban event registered: %v", event)
 
 		case <-ctx.Done():

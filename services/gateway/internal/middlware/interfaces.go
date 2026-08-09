@@ -8,9 +8,9 @@ import (
 )
 
 type MiddlewareRepo interface {
-	Put(key any, expAt time.Time)
-	Get(key any) (time.Time, bool)
-	IsExists(key any) bool
+	Put(ctx context.Context, key string, ttl time.Duration)
+	Get(ctx context.Context, key string) (time.Duration, bool)
+	IsExists(ctx context.Context, key string) bool
 }
 
 type MiddlewareCache interface {

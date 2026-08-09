@@ -3,7 +3,7 @@ package di
 import (
 	stdconfig "MyMessenger/pkg/config"
 	"MyMessenger/pkg/di"
-	"MyMessenger/pkg/redis"
+	pkgredis "MyMessenger/pkg/redis"
 	"MyMessenger/services/gateway/internal/config"
 	"MyMessenger/services/gateway/internal/infra"
 	"MyMessenger/services/gateway/internal/middlware"
@@ -12,16 +12,22 @@ import (
 
 	"net/http"
 
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 )
 
-func provideSub(sub *redis.RedisSubscriber) middlware.Subscriber {
+const (
+	appPrefix = "gtw"
+)
+
+func provideSub(sub *pkgredis.RedisSubscriber) middlware.Subscriber {
 	return middlware.Subscriber(sub)
 }
 
-func provideRepoFactory(conf *config.InfraConfig) func(lf fx.Lifecycle) middlware.MiddlewareRepo {
-	return func(lf fx.Lifecycle) middlware.MiddlewareRepo {
-		return infra.NewAutoCleaningRepo(lf, conf)
+func provideRepoFactory(rd *redis.Client) func(prefix string) middlware.MiddlewareRepo {
+	rf := infra.NewRedisRepoFactory(rd, appPrefix)
+	return func(prefix string) middlware.MiddlewareRepo {
+		return rf.NewRedisRepo(prefix)
 	}
 }
 

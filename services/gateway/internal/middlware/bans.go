@@ -23,16 +23,14 @@ func FromBroker(reason broker.BanReason) BanReason {
 	}
 }
 
-func (m *Middleware) getBanTime(reason BanReason) time.Time {
-	var banDur time.Duration
+func (m *Middleware) getBanTtl(reason BanReason) time.Duration {
 	switch reason {
 	case TooManyRequestsUser:
-		banDur = m.conf.BanTooManyRequestsDurationUser
+		return m.conf.BanTooManyRequestsDurationUser
 	case TooManyRequestsIp:
-		banDur = m.conf.BanTooManyRequestsDurationIp
+		return m.conf.BanTooManyRequestsDurationIp
 	default:
 		log.Printf("calcBanTime: not implemented BanReason: %q", reason)
-		banDur = DefBanTime
+		return DefBanTime
 	}
-	return time.Now().Add(banDur)
 }

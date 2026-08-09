@@ -1,97 +1,59 @@
 package infra
 
 import (
-	"MyMessenger/services/gateway/internal/config"
 	"context"
-	"sync"
+	"fmt"
+	"log"
 	"time"
 
-	"go.uber.org/fx"
+	"github.com/redis/go-redis/v9"
 )
 
-type AutoCleaningRepo struct {
-	mu sync.RWMutex
-	m  map[any]time.Time
-
-	tickerTiming time.Duration
+type RedisFactory struct {
+	rd        *redis.Client
+	appPrefix string
 }
 
-func NewAutoCleaningRepo(lf fx.Lifecycle, conf *config.InfraConfig) *AutoCleaningRepo {
-	repo := &AutoCleaningRepo{
-		m:            make(map[any]time.Time),
-		tickerTiming: conf.TickerCleanerTiming,
-	}
-
-	ctxC, ctxCancel := context.WithCancel(context.Background())
-	lf.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			go repo.cleanMap(ctxC)
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
-			ctxCancel()
-			return nil
-		},
-	})
-
-	return repo
+type RedisRepo struct {
+	rd     *redis.Client
+	prefix string
 }
 
-func (r *AutoCleaningRepo) cleanMap(ctx context.Context) {
-	ticker := time.NewTicker(r.tickerTiming)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			var toDel []any
-
-			r.mu.RLock()
-			now := time.Now()
-			for id, val := range r.m {
-				if val.Before(now) {
-					toDel = append(toDel, id)
-				}
-			}
-			r.mu.RUnlock()
-
-			if len(toDel) == 0 {
-				continue
-			}
-
-			r.mu.Lock()
-			now = time.Now()
-			for _, id := range toDel {
-				val, ok := r.m[id]
-				if ok && val.Before(now) {
-					delete(r.m, id)
-				}
-			}
-			r.mu.Unlock()
-		}
+func NewRedisRepoFactory(rd *redis.Client, appPrefix string) *RedisFactory {
+	return &RedisFactory{
+		rd:        rd,
+		appPrefix: appPrefix,
 	}
 }
 
-func (r *AutoCleaningRepo) Put(key any, expAt time.Time) {
-	r.mu.Lock()
-	r.m[key] = expAt
-	r.mu.Unlock()
+func (f *RedisFactory) NewRedisRepo(modulePrefix string) *RedisRepo {
+	fullPrefix := fmt.Sprintf("%s:%s", f.appPrefix, modulePrefix)
+	return &RedisRepo{
+		rd:     f.rd,
+		prefix: fullPrefix,
+	}
 }
 
-func (r *AutoCleaningRepo) Get(key any) (time.Time, bool) {
-	r.mu.RLock()
-	val, isExists := r.m[key]
-	r.mu.RUnlock()
-
-	return val, isExists
+func (r *RedisRepo) toKey(key string) string {
+	return fmt.Sprintf("%s:%s", r.prefix, key)
 }
 
-func (r *AutoCleaningRepo) IsExists(key any) bool {
-	r.mu.RLock()
-	_, isExists := r.m[key]
-	r.mu.RUnlock()
+func (r *RedisRepo) Put(ctx context.Context, key string, ttl time.Duration) {
+	err := r.rd.Set(ctx, r.toKey(key), "b", ttl).Err()
+	if err != nil {
+		log.Printf("Put: Trouble with set, err: %q", err)
+	}
+}
 
-	return isExists
+func (r *RedisRepo) Get(ctx context.Context, key string) (time.Duration, bool) {
+	val, err := r.rd.TTL(ctx, r.toKey(key)).Result()
+	if err != nil || val == -2 {
+		return 0, false
+	}
+	return val, true
+}
+
+func (r *RedisRepo) IsExists(ctx context.Context, key string) bool {
+	count, err := r.rd.Exists(ctx, r.toKey(key)).Result()
+	return err == nil && count > 0
 }

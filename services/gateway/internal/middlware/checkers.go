@@ -2,6 +2,7 @@ package middlware
 
 import (
 	"MyMessenger/pkg/jwt"
+	"context"
 	"log"
 	"strings"
 	"time"
@@ -11,17 +12,16 @@ const (
 	tokenPartsCount = 3
 )
 
-func (m *Middleware) checkForBanId(claims *jwt.TokenClaims) (time.Time, error) {
-	var nilTime time.Time
+func (m *Middleware) checkForBanId(ctx context.Context, claims *jwt.TokenClaims) (time.Duration, error) {
 	id, err := m.checker.GetUserIdFromClaims(claims)
 	if err != nil {
-		return nilTime, ErrInternal
+		return -1, ErrInternal
 	}
-	expAt, isExists := m.repoBansId.Get(id)
+	ttl, isExists := m.repoBansId.Get(ctx, id.String())
 	if !isExists {
-		return nilTime, nil
+		return -1, nil
 	}
-	return expAt, ErrBanned
+	return ttl, ErrBanned
 }
 
 func (m *Middleware) checkTokenParts(token string) error {
@@ -48,7 +48,7 @@ func (m *Middleware) checkTokenParts(token string) error {
 	return nil
 }
 
-func (m *Middleware) checkToken(token string) error {
+func (m *Middleware) checkToken(ctx context.Context, token string) error {
 	if token == "" {
 		log.Printf("checkToken: empty token")
 		return ErrBadToken
@@ -59,7 +59,7 @@ func (m *Middleware) checkToken(token string) error {
 		return ErrBadToken
 	}
 
-	if m.repoTokens.IsExists(token) {
+	if m.repoTokens.IsExists(ctx, token) {
 		log.Printf("checkToken: banned token %q in repoTokens", token)
 		return ErrBanned
 	}
@@ -75,14 +75,9 @@ func (m *Middleware) checkToken(token string) error {
 		return ErrBadToken
 	}
 
-	banExpAt, err := m.checkForBanId(claims)
+	banTtl, err := m.checkForBanId(ctx, claims)
 	if err != nil {
-		minTime := claims.ExpiresAt.Time
-		if banExpAt.Before(minTime) {
-			minTime = banExpAt
-		}
-
-		m.repoTokens.Put(token, minTime)
+		m.repoTokens.Put(ctx, token, banTtl)
 		log.Printf("checkToken: new token in repoTokens %q", token)
 		return ErrBanned
 	}
