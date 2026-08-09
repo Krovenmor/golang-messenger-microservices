@@ -4,6 +4,7 @@ import (
 	"MyMessenger/pkg/utils"
 	"MyMessenger/services/auth/internal/service"
 	"errors"
+	"log"
 	"net/http"
 )
 
@@ -14,6 +15,7 @@ func (h *Handler) ToStatusCode(err error) int {
 	case errors.Is(err, service.ErrInternal):
 		return http.StatusInternalServerError
 	default:
+		log.Printf("ToStatusCode: not known error: %q", err)
 		return http.StatusBadRequest
 	}
 }
