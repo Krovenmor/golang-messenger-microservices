@@ -2,10 +2,16 @@ package jwt
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
+)
+
+var (
+	ErrNoAuth  = errors.New("bearer auth required")
+	ErrNoToken = errors.New("empty token")
 )
 
 type ExtCheckFunc func(w http.ResponseWriter, r *http.Request, c *TokenClaims) error
@@ -29,22 +35,29 @@ type contextKey string
 
 const UserIdKey contextKey = "userUUID"
 
+func GetBearerToken(r *http.Request) (string, error) {
+	header := r.Header.Get("Authorization")
+	if header == "" || !strings.HasPrefix(header, "Bearer ") {
+		return "", ErrNoAuth
+	}
+
+	token := strings.TrimPrefix(header, "Bearer ")
+	if token == "" {
+		return "", ErrNoToken
+	}
+
+	return token, nil
+}
+
 func (a *Authenticator) Middleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		log.Printf("Income request to: %q, from: %q", r.URL.Path, r.RemoteAddr)
 
-		header := r.Header.Get("Authorization")
-		if header == "" || !strings.HasPrefix(header, "Bearer ") {
-			log.Printf("No bearer auth was included")
-			http.Error(w, "Bearer auth required", http.StatusUnauthorized)
-			return
-		}
-
-		token := strings.TrimPrefix(header, "Bearer ")
-		if token == "" {
-			log.Printf("Bearer auth without token")
-			http.Error(w, "Empty token", http.StatusUnauthorized)
+		token, err := GetBearerToken(r)
+		if err != nil {
+			log.Printf("GetBearerToken: %q", err)
+			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
@@ -65,4 +78,8 @@ func (a *Authenticator) Middleware(h http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), UserIdKey, claims.Subject)
 		h.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func (a *Authenticator) GetChecker() *JWTChecker {
+	return &a.checker
 }

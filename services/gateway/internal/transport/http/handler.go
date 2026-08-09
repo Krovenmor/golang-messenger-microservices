@@ -9,16 +9,14 @@ import (
 )
 
 type MainHandler struct {
-	limitChecker *middlware.LimitChecker
-
-	conf *config.MainHandlerConfig
+	middleware *middlware.Middleware
+	conf       *config.MainHandlerConfig
 }
 
-func NewMainHandler(limitChecker *middlware.LimitChecker, conf *config.MainHandlerConfig) *MainHandler {
-
+func NewMainHandler(mw *middlware.Middleware, conf *config.MainHandlerConfig) *MainHandler {
 	return &MainHandler{
-		limitChecker: limitChecker,
-		conf:         conf,
+		middleware: mw,
+		conf:       conf,
 	}
 }
 
@@ -39,7 +37,7 @@ func (h *MainHandler) RegisterRoutes(m *http.ServeMux) (http.Handler, error) {
 	}
 
 	protected := func(pattern string, handler http.Handler) {
-		m.Handle(pattern, h.limitChecker.Middleware(handler))
+		m.Handle(pattern, h.middleware.FullMiddleware(handler))
 	}
 
 	authProxy := getParsed(h.conf.AuthServiceURL)
@@ -52,11 +50,11 @@ func (h *MainHandler) RegisterRoutes(m *http.ServeMux) (http.Handler, error) {
 		return nil, err
 	}
 
-	protected("/api/auth/", authProxy)
 	protected("/api/msg/", msgProxy)
-	protected("/api/ws", wsProxy)
 	protected("/api/status/", statProxy)
 
+	m.Handle("/api/ws", h.middleware.QueryParamMiddleware(wsProxy, "token"))
+	m.Handle("/api/auth/", h.middleware.LimitMiddleware(authProxy))
 	m.Handle("/", webProxy)
 
 	return m, nil
