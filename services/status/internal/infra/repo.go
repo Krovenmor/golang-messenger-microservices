@@ -13,13 +13,18 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+var (
+	keyPatternPrefix = "status:"
+	saveParts        = 2
+)
+
 type RedisRepo struct {
 	rd      *redis.Client
 	pattern string
 }
 
 func NewRedisRepo(rdClient *redis.Client, conf *config.RedisChannelsConfig) *RedisRepo {
-	return &RedisRepo{rd: rdClient, pattern: conf.UserStatusPattern}
+	return &RedisRepo{rd: rdClient, pattern: keyPatternPrefix + conf.UserStatusPattern}
 }
 
 func (r *RedisRepo) ToKey(userId string) string {
@@ -32,7 +37,7 @@ func (r *RedisRepo) ToSave(s *broker.StatusPayload) string {
 
 func (r *RedisRepo) FromSaved(s string) *service.UserStatus {
 	sl := strings.Split(s, ":")
-	if len(sl) != 2 {
+	if len(sl) != saveParts {
 		return nil
 	}
 	status, err := strconv.ParseInt(sl[0], 10, 64)
