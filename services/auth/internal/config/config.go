@@ -13,13 +13,20 @@ type AuthConfig struct {
 	MaxLoginLength int
 
 	PrvKey []byte
-	PubKey []byte
 
 	AccessTokenTTL  time.Duration
 	RefreshTokenTTL time.Duration
 }
 
-func GetAuthConfig() (AuthConfig, error) {
+type HashConfig struct {
+	Memory      int
+	Iterations  int
+	Parallelism int
+	SaltLength  int
+	KeyLength   int
+}
+
+func GetAuthConfig() (*AuthConfig, error) {
 	r := config.NewConfigReader()
 
 	conf := AuthConfig{
@@ -30,8 +37,21 @@ func GetAuthConfig() (AuthConfig, error) {
 		AccessTokenTTL:  r.GetDuration("JWT_ACCESS_TTL"),
 		RefreshTokenTTL: r.GetDuration("JWT_REFRESH_TTL"),
 		PrvKey:          r.GetBytes("JWT_PRVKEY_PATH"),
-		PubKey:          r.GetBytes("JWT_PUBKEY_PATH"),
 	}
 
-	return conf, r.Err()
+	return &conf, r.Err()
+}
+
+func GetHashConfig() (*HashConfig, error) {
+	r := config.NewConfigReader()
+
+	conf := HashConfig{
+		Memory:      r.GetInt("HASH_MEMORY"),
+		Iterations:  r.GetInt("HASH_ITERATIONS"),
+		Parallelism: r.GetInt("HASH_PARALLELISM"),
+		SaltLength:  r.GetInt("HASH_SALT_LENGTH"),
+		KeyLength:   r.GetInt("HASH_KEY_LENGTH"),
+	}
+
+	return &conf, r.Err()
 }

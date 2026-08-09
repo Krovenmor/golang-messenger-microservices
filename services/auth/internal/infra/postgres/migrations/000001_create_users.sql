@@ -2,7 +2,7 @@
 create table if not exists Users (
     user_id uuid primary key,
     login VARCHAR(50) unique not null,
-    password VARCHAR(50) not null
+    password VARCHAR(128) not null
 );
 
 -- +goose Down

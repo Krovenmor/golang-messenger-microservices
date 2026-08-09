@@ -1,46 +1,18 @@
-package infra
+package postgres
 
 import (
-	"MyMessenger/services/auth/internal/infra/queries"
+	"MyMessenger/services/auth/internal/infra/postgres/queries"
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-)
-
-var (
-	ErrAlreadyExists     = errors.New("already exists")
-	ErrAlreadyExistsUser = errors.New("user already exists")
-	ErrNotFound          = errors.New("not found")
 )
 
 type PostagreRepo struct {
 	pool *pgxpool.Pool
 	q    queries.Queries
-}
-
-func betterError(err error) error {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
-		if pgErr.Code == "23503" {
-			switch pgErr.ConstraintName {
-			case "users_login_key":
-				return ErrAlreadyExistsUser
-			}
-		}
-		if pgErr.Code == "23505" {
-			return ErrAlreadyExists
-		}
-	}
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrNotFound
-	}
-	return err
 }
 
 func NewRepo(pool *pgxpool.Pool) (*PostagreRepo, error) {
@@ -68,13 +40,26 @@ func (p *PostagreRepo) AddNewUser(ctx context.Context, userId uuid.UUID, login, 
 	return nil
 }
 
-func (p *PostagreRepo) GetUser(ctx context.Context, login, password string) (uuid.UUID, error) {
+func (p *PostagreRepo) GetUser(ctx context.Context, login string) (uuid.UUID, string, error) {
 	var userId uuid.UUID
-	err := p.pool.QueryRow(ctx, p.q.GetUser, login, password).Scan(&userId)
+	var password string
+	err := p.pool.QueryRow(ctx, p.q.GetUser, login).Scan(&userId, &password)
 	if err != nil {
-		return userId, betterError(err)
+		return userId, password, betterError(err)
 	}
-	return userId, nil
+	return userId, password, nil
+}
+
+func (p *PostagreRepo) IsUserExists(ctx context.Context, login string) error {
+	var isExists int
+	err := p.pool.QueryRow(ctx, p.q.CheckUserExists, login).Scan(&isExists)
+	if err != nil {
+		return betterError(err)
+	}
+	if isExists != 1 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (p *PostagreRepo) SaveRefresh(ctx context.Context, userId uuid.UUID, rToken string, expAt time.Time) error {

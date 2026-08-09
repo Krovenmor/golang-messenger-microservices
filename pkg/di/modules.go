@@ -8,10 +8,16 @@ import (
 	"go.uber.org/fx"
 )
 
-var AuthenticatorModule = fx.Options(
+var JwtCheckerModule = fx.Options(
 	fx.Provide(
 		config.GetJwtCheckerConf,
 		jwt.NewJwtCheckerConf,
+	),
+)
+
+var AuthenticatorModule = fx.Options(
+	JwtCheckerModule,
+	fx.Provide(
 		jwt.NewAuthenticator,
 	),
 )
