@@ -39,6 +39,7 @@ func (r *PostagreRepo) NewProfile(ctx context.Context, profile *service.Profile)
 		profile.PublicKey,
 		profile.PrivateKey,
 		profile.KDFSalt,
+		profile.KeyNonce,
 	)
 	if err != nil {
 		return getErrorMsg(err)

@@ -59,7 +59,7 @@ MessageOutcomeBody:
 }
 ```
 
-- **"POST /api/msg/profile/new"** - creates a new profile  
+- **"POST /api/msg/profile"** - creates a new profile  
 Income:  
 ```json
 {  
@@ -67,7 +67,8 @@ Income:
     "UserName": "Your Unique UserName",  
     "PubKey": "Public key",  
     "EncryptedPrvKey": "Encrypted Private Key",  
-    "KDFSalt": "KDF Salt"  
+    "KDFSalt": "KDF Salt",
+    "KeyNonce": "Your nonce"
 }  
 ```
 
@@ -81,6 +82,7 @@ Outcome:
     "PubKey": "Public key",  
     "EncryptedPrvKey": "Encrypted Private Key",  
     "KDFSalt": "KDF Salt",
+    "KeyNonce": "Your nonce",
     "CreatedAt": "time, example: '2026-07-28T19:56:51.855208Z'"
 }  
 ```

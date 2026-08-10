@@ -13,6 +13,7 @@ type ProfileBody struct {
 	PublicKey  string    `json:"PubKey" validate:"required"`
 	PrivateKey string    `json:"EncryptedPrvKey" validate:"required"`
 	KDFSalt    string    `json:"KDFSalt" validate:"required"`
+	KeyNonce   string    `json:"KeyNonce" validate:"required"`
 	CreatedAt  time.Time `json:"CreatedAt"`
 }
 

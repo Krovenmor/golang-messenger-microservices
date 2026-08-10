@@ -24,6 +24,7 @@ type Profile struct {
 	PublicKey  string
 	PrivateKey string
 	KDFSalt    string
+	KeyNonce   string
 	CreatedAt  time.Time
 }
 

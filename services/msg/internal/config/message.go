@@ -17,6 +17,9 @@ type MessageConfig struct {
 	MaxPrvKeyLen int
 	MaxSaltLen   int
 
+	MinNonceLen int
+	MaxNonceLen int
+
 	MinQuantity int
 	MaxQuantity int
 }
@@ -37,6 +40,9 @@ func GetMessageConfig() (*MessageConfig, error) {
 		MaxSaltLen:     r.GetInt("MAX_SALT_LEN"),
 		MinQuantity:    r.GetInt("MIN_QUANTITY_QUERIES"),
 		MaxQuantity:    r.GetInt("MAX_QUANTITY_QUERIES"),
+
+		MinNonceLen: r.GetInt("MIN_NONCE_LEN"),
+		MaxNonceLen: r.GetInt("MAX_NONCE_LEN"),
 	}
 
 	return &conf, r.Err()

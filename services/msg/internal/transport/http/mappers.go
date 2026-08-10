@@ -14,6 +14,7 @@ func ToServiceProfile(p *ProfileBody, userId uuid.UUID) *service.Profile {
 		PublicKey:  p.PublicKey,
 		PrivateKey: p.PrivateKey,
 		KDFSalt:    p.KDFSalt,
+		KeyNonce:   p.KeyNonce,
 	}
 }
 
@@ -26,6 +27,7 @@ func FromServiceProfile(p *service.Profile) *ProfileBody {
 		PrivateKey: p.PrivateKey,
 		KDFSalt:    p.KDFSalt,
 		CreatedAt:  p.CreatedAt,
+		KeyNonce:   p.KeyNonce,
 	}
 }
 

@@ -52,7 +52,7 @@ func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {
 		m.Handle(pattern, h.auth.Middleware(handlerFunc))
 	}
 
-	protected("POST /api/msg/profile/new", h.NewProfile)
+	protected("POST /api/msg/profile", h.NewProfile)
 	protected("GET /api/msg/profile", h.GetProfilePrivate)
 	protected(fmt.Sprintf("GET /api/msg/profile/{%s}", targetKey), h.GetProfilePublic)
 	protected("GET /api/msg/profile/chats", h.GetProfileChats)

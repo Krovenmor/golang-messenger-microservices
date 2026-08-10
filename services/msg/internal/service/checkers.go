@@ -56,6 +56,17 @@ func (m *MessageServiceImpl) checkProfileSalt(p *Profile) error {
 	return nil
 }
 
+func (m *MessageServiceImpl) checkProfileNonce(p *Profile) error {
+	lNonce := len(p.KeyNonce)
+	if lNonce < m.conf.MinNonceLen {
+		return fmt.Errorf("nonce are too short")
+	}
+	if lNonce > m.conf.MaxNonceLen {
+		return fmt.Errorf("nonce are too big")
+	}
+	return nil
+}
+
 func (m *MessageServiceImpl) checkProfile(p *Profile) error {
 	err := m.checkProfileUserName(p.UserName)
 	if err != nil {
@@ -70,6 +81,10 @@ func (m *MessageServiceImpl) checkProfile(p *Profile) error {
 		return err
 	}
 	err = m.checkProfileSalt(p)
+	if err != nil {
+		return err
+	}
+	err = m.checkProfileNonce(p)
 	if err != nil {
 		return err
 	}
