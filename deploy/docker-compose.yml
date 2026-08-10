@@ -62,6 +62,7 @@ services:
       dockerfile: services/auth/Dockerfile
     env_file:
       - ../config/common.env
+      - ../config/redis_channels.env
       - ../config/auth.env
     depends_on:
       auth-db:
