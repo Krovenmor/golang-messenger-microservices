@@ -12,6 +12,9 @@ lastMessage as (
             'MessageId', message_id,
             'SenderId', sender_id,
             'Message', message,
+            'SenderKey', sender_key,
+            'ReceiverKey', receiver_key,
+            'Nonce', nonce,
             'CreatedAt', created_at,
             'IsRedacted', is_redacted,
             'IsDeleted', is_deleted,
@@ -24,13 +27,7 @@ lastMessage as (
 members_aggregated AS (
     select
         c.chat_id,
-        json_agg(
-            json_build_object(
-                'UserId', c.user_id,
-                'Name', p.name,
-                'JoinedAt', c.joined_at
-            )
-        ) AS members_json
+        get_members(c.chat_id) AS members_json
     from chatmembers c
     join profiles p on p.user_id = c.user_id
     where chat_id in (select chat_id from chats_ids)

@@ -75,7 +75,7 @@ func (h *Handler) GetProfilePublic(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) NewChat(w http.ResponseWriter, r *http.Request) {
-	body, err := recv[NewChatIncomeBody](w, r)
+	body, err := recv[NewChatRequestBody](w, r)
 	if err != nil {
 		return
 	}
@@ -102,7 +102,7 @@ func (h *Handler) PostMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	body, err := recv[PostMessageIncomeBody](w, r)
+	body, err := recv[PostMessageRequestBody](w, r)
 	if err != nil {
 		return
 	}
@@ -111,7 +111,7 @@ func (h *Handler) PostMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	mId, err := h.msg.PostMessage(r.Context(), chatId, *ToServiceMsg(body, userId))
+	mId, err := h.msg.PostMessage(r.Context(), chatId, *ToServicePostMsg(body, userId))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -144,7 +144,8 @@ func (h *Handler) GetProfileChatsExtended(w http.ResponseWriter, r *http.Request
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	utils.Send(w, &chats)
+	chatsToSend := FromServiceFullChatsInfo(chats)
+	utils.Send(w, &chatsToSend)
 }
 
 func (h *Handler) GetChatInfo(w http.ResponseWriter, r *http.Request) {
@@ -158,7 +159,7 @@ func (h *Handler) GetChatInfo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	utils.Send(w, &chatInfo)
+	utils.Send(w, FromServiceChatInfo(chatInfo))
 }
 
 func (h *Handler) GetChatMessages(w http.ResponseWriter, r *http.Request) {
@@ -191,7 +192,8 @@ func (h *Handler) GetChatMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.Send(w, &msgs)
+	msgsToSend := FromServiceMessages(msgs)
+	utils.Send(w, &msgsToSend)
 }
 
 func (h *Handler) GetMessage(w http.ResponseWriter, r *http.Request) {
@@ -215,7 +217,8 @@ func (h *Handler) GetMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	utils.Send(w, msg)
+	msgToSend := FromServiceMessage(*msg)
+	utils.Send(w, &msgToSend)
 }
 
 func (h *Handler) ChangeMessage(w http.ResponseWriter, r *http.Request) {
@@ -229,7 +232,7 @@ func (h *Handler) ChangeMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	msg, err := recv[PostMessageIncomeBody](w, r)
+	msg, err := recv[ChangeMessageRequestBody](w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

@@ -7,14 +7,25 @@ import (
 	"github.com/google/uuid"
 )
 
+type ToPostMessage struct {
+	SenderId    uuid.UUID
+	Message     string
+	SenderKey   string
+	ReceiverKey string
+	Nonce       string
+}
+
 type Message struct {
-	MessageId  uuid.UUID
-	SenderId   uuid.UUID
-	Message    *string
-	CreatedAt  *time.Time
-	IsRedacted bool
-	IsDeleted  bool
-	RedactedAt *time.Time
+	MessageId   uuid.UUID
+	SenderId    uuid.UUID
+	Message     *string
+	SenderKey   string
+	ReceiverKey string
+	Nonce       string
+	CreatedAt   *time.Time
+	IsRedacted  bool
+	IsDeleted   bool
+	RedactedAt  *time.Time
 }
 
 type Profile struct {
@@ -36,7 +47,7 @@ type ChatMember struct {
 
 type ChatInfo struct {
 	CreatedAt time.Time
-	Members   []ChatMember
+	Members   json.RawMessage
 }
 
 type ChatFullInfo struct {

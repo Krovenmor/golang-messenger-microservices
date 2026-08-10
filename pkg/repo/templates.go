@@ -7,6 +7,22 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+func GetQueryByPos[R any](ctx context.Context, pool *pgxpool.Pool, query string, args ...any) (*R, error) {
+	var rVal R
+	rows, err := pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	rVal, err = pgx.CollectOneRow(rows, pgx.RowToStructByPos[R])
+	if err != nil {
+		return nil, err
+	}
+
+	return &rVal, nil
+}
+
 func GetSliceQueryByPos[R any](ctx context.Context, pool *pgxpool.Pool, query string, args ...any) ([]R, error) {
 	var rVal []R
 	rows, err := pool.Query(ctx, query, args...)

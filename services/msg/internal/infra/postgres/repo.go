@@ -59,7 +59,7 @@ func (r *PostagreRepo) NewChat(ctx context.Context, chatId, fUser, sUser uuid.UU
 }
 
 func (r *PostagreRepo) NewMessage(ctx context.Context, chatId uuid.UUID, msg *service.Message) error {
-	t, err := r.pool.Exec(ctx, r.q.PostMessage, msg.MessageId, chatId, msg.SenderId, msg.Message)
+	t, err := r.pool.Exec(ctx, r.q.PostMessage, msg.MessageId, chatId, msg.SenderId, msg.Message, msg.SenderKey, msg.ReceiverKey, msg.Nonce)
 	if err != nil {
 		return getErrorMsg(err)
 	}
@@ -70,15 +70,20 @@ func (r *PostagreRepo) NewMessage(ctx context.Context, chatId uuid.UUID, msg *se
 }
 
 func (r *PostagreRepo) GetMessage(ctx context.Context, chatId, msgId uuid.UUID) (*service.Message, error) {
-	var msg service.Message
-	err := r.pool.QueryRow(ctx, r.q.GetMessage, chatId, msgId).Scan(
-		&msg.MessageId, &msg.SenderId, &msg.Message, &msg.CreatedAt,
-		&msg.IsRedacted, &msg.IsDeleted, &msg.RedactedAt,
-	)
+	//var msg service.Message
+
+	msg, err := repo.GetQueryByPos[service.Message](ctx, r.pool, r.q.GetMessage, chatId, msgId)
+
+	//err := r.pool.QueryRow(ctx, r.q.GetMessage, chatId, msgId).Scan(
+	//	&msg.MessageId, &msg.SenderId,
+	//	&msg.Message, &msg.SenderKey, &msg.ReceiverKey, &msg.Nonce,
+	//	&msg.CreatedAt, &msg.IsRedacted, &msg.IsDeleted, &msg.RedactedAt,
+	//)
+
 	if err != nil {
 		return nil, getErrorMsg(err)
 	}
-	return &msg, nil
+	return msg, nil
 }
 
 func (r *PostagreRepo) RedactMessage(ctx context.Context, chatId, msgId, userId uuid.UUID, newText string) error {
@@ -155,14 +160,10 @@ func (r *PostagreRepo) GetChatMembersIdsExcept(ctx context.Context, chatId, exce
 func (r *PostagreRepo) GetChatInfo(ctx context.Context, chatId uuid.UUID) (*service.ChatInfo, error) {
 	var info service.ChatInfo
 	err := r.pool.QueryRow(ctx, r.q.GetChatInfo, chatId).Scan(
-		&info.CreatedAt,
+		&info.CreatedAt, &info.Members,
 	)
 	if err != nil {
 		return nil, getErrorMsg(err)
-	}
-	info.Members, err = r.GetChatMembers(ctx, chatId)
-	if err != nil {
-		return nil, err
 	}
 	return &info, nil
 }

@@ -67,7 +67,7 @@ func (m *MessageServiceImpl) CreateNewChat(ctx context.Context, fUser, sUser uui
 	return nChatId, nil
 }
 
-func (m *MessageServiceImpl) PostMessage(ctx context.Context, chatId uuid.UUID, msg Message) (uuid.UUID, error) {
+func (m *MessageServiceImpl) PostMessage(ctx context.Context, chatId uuid.UUID, msg ToPostMessage) (uuid.UUID, error) {
 	if err := m.checkMessage(&msg); err != nil {
 		return uuid.Nil, err
 	}
@@ -75,8 +75,15 @@ func (m *MessageServiceImpl) PostMessage(ctx context.Context, chatId uuid.UUID, 
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("Trouble with gen UUID for new message: %w", err)
 	}
-	msg.MessageId = msgId
-	err = m.repo.NewMessage(ctx, chatId, &msg)
+	rMsg := Message{
+		MessageId:   msgId,
+		SenderId:    msg.SenderId,
+		Message:     &msg.Message,
+		SenderKey:   msg.SenderKey,
+		ReceiverKey: msg.ReceiverKey,
+		Nonce:       msg.Nonce,
+	}
+	err = m.repo.NewMessage(ctx, chatId, &rMsg)
 	if err != nil {
 		return uuid.Nil, err
 	}

@@ -12,7 +12,7 @@ type MessageService interface {
 	GetProfileByUserName(ctx context.Context, username string) (*Profile, error)
 	IsProfileInChat(ctx context.Context, userId, chatId uuid.UUID) error
 
-	PostMessage(ctx context.Context, chatId uuid.UUID, msg Message) (uuid.UUID, error)
+	PostMessage(ctx context.Context, chatId uuid.UUID, msg ToPostMessage) (uuid.UUID, error)
 	GetMessage(ctx context.Context, chatId, msgId uuid.UUID) (*Message, error)
 	RedactMessage(ctx context.Context, chatId, msgId, userId uuid.UUID, newText string) error
 	DelMessage(ctx context.Context, chatId, msgId, userId uuid.UUID) error

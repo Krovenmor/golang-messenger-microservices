@@ -56,8 +56,8 @@ func (m *MessageServiceImpl) checkProfileSalt(p *Profile) error {
 	return nil
 }
 
-func (m *MessageServiceImpl) checkProfileNonce(p *Profile) error {
-	lNonce := len(p.KeyNonce)
+func (m *MessageServiceImpl) checkNonce(nonce string) error {
+	lNonce := len(nonce)
 	if lNonce < m.conf.MinNonceLen {
 		return fmt.Errorf("nonce are too short")
 	}
@@ -84,7 +84,7 @@ func (m *MessageServiceImpl) checkProfile(p *Profile) error {
 	if err != nil {
 		return err
 	}
-	err = m.checkProfileNonce(p)
+	err = m.checkNonce(p.KeyNonce)
 	if err != nil {
 		return err
 	}
@@ -94,11 +94,20 @@ func (m *MessageServiceImpl) checkProfile(p *Profile) error {
 	return nil
 }
 
-func (m *MessageServiceImpl) checkMessage(msg *Message) error {
-	if msg.Message == nil {
-		return fmt.Errorf("no message")
+func (m *MessageServiceImpl) checkMessage(msg *ToPostMessage) error {
+	if msg.SenderId == uuid.Nil {
+		return fmt.Errorf("Bad Sender UUID")
 	}
-	return m.checkMessageText(*msg.Message)
+	if len(msg.ReceiverKey) != m.conf.MsgKeysLen {
+		return fmt.Errorf("checkMessage: ReceiverKey != MsgKeysLen, %d != %d", len(msg.ReceiverKey), m.conf.MsgKeysLen)
+	}
+	if len(msg.SenderKey) != m.conf.MsgKeysLen {
+		return fmt.Errorf("checkMessage: SenderKey != MsgKeysLen, %d != %d", len(msg.SenderKey), m.conf.MsgKeysLen)
+	}
+	if len(msg.Nonce) != m.conf.MsgNonceLen {
+		return fmt.Errorf("checkMessage: Nonce != MsgNonceLen, %d != %d", len(msg.Nonce), m.conf.MsgNonceLen)
+	}
+	return m.checkMessageText(msg.Message)
 }
 
 func (m *MessageServiceImpl) checkMessageText(text string) error {

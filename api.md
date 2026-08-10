@@ -49,13 +49,26 @@ Outcome:
 MessageOutcomeBody:  
 ```json
 {  
-    "MessageId": "id UUIDv7",  
-    "SenderId": "User UUID",  
-    "Message": "Message text",  
-    "CreatedAt": "Time when it was added to server UTC, format RFC 3339, example: '2026-07-28T00:21:09.904497Z'",  
-    "IsRedacted": true/false,
-    "IsDeleted": true/false (if it's true message will be null),
-    "RedactedAt": "time ..." (if it wasn't redacted (not deleted, not redacted) then null)
+    // Unique message identifier (UUIDv7 ensures natural time-based sorting)
+    "messageId": "01910d21-9a1b-7123-8456-426614174000",
+    // Sender's user UUIDv4
+    "senderId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",  
+    // Encrypted message payload (AES-256-GCM ciphertext + Auth Tag in Base64). Evaluates to '' if isDeleted = true
+    "message": "a8F3b2C9m1K5p7Q0v3X8z...", 
+    // Symmetric MessageKey encrypted with the SENDER'S public key (ECDH P-256). Allows sender to decrypt their own history. Exactly 80 Base64 characters
+    "senderKey": "u7K8m2Q1v9Z4x7W3p0N5b8V2c1X6m9Q3v8Z1x4W7p0N3b6V9c2X5m8Q1v4Z7x0W3p6N9b2V5c8X1m4Q7v0Z3x6W9p2N5b8V1",
+    // Same symmetric MessageKey encrypted with the RECEIVER'S public key (ECDH P-256). Allows receiver to decrypt incoming payload. Exactly 80 Base64 characters
+    "receiverKey": "x9Z1x4W7p0N3b6V9c2X5m8Q1v4Z7x0W3p6N9b2V5c8X1m4Q7v0Z3x6W9p2N5b8V1u7K8m2Q1v9Z4x7W3p0N5b8V2c1X6m9Q3",
+    // 12-byte Initialization Vector (IV/Nonce) for AES-256-GCM encoded in Base64. Required by the client to decrypt 'message'. Exactly 16 characters
+    "nonce": "a8F3b2C9m1K5p7Q0",
+    // UTC timestamp when the message was persisted on the server (RFC 3339 format)
+    "createdAt": "2026-07-28T00:21:09.904497Z",  
+    // Flag indicating whether the message content has been edited by the sender
+    "isRedacted": false,
+    // Soft-delete flag. If true, the 'message' field is served as null to protect privacy
+    "isDeleted": false,
+    // UTC timestamp of the last edit (RFC 3339 format). Set to null if the message was never edited or if deleted
+    "redactedAt": null
 }
 ```
 
@@ -63,12 +76,12 @@ MessageOutcomeBody:
 Income:  
 ```json
 {  
-    "Name": "Your Public Name",
-    "UserName": "Your Unique UserName",  
-    "PubKey": "Public key",  
-    "EncryptedPrvKey": "Encrypted Private Key",  
-    "KDFSalt": "KDF Salt",
-    "KeyNonce": "Your nonce"
+    "name": "Your Public Name",
+    "userName": "Your Unique UserName",  
+    "pubKey": "Public key",  
+    "encryptedPrvKey": "Encrypted Private Key",  
+    "kdfSalt": "KDF Salt",
+    "keyNonce": "Your nonce"
 }  
 ```
 
@@ -76,14 +89,14 @@ Income:
 Outcome:  
 ```json
 {  
-    "UserId": "UUID of profile",
-    "Name": "Name",
-    "UserName": "User Name",  
-    "PubKey": "Public key",  
-    "EncryptedPrvKey": "Encrypted Private Key",  
-    "KDFSalt": "KDF Salt",
-    "KeyNonce": "Your nonce",
-    "CreatedAt": "time, example: '2026-07-28T19:56:51.855208Z'"
+    "userId": "UUID of profile",
+    "name": "Name",
+    "userName": "User Name",  
+    "pubKey": "Public key",  
+    "encryptedPrvKey": "Encrypted Private Key",  
+    "kdfSalt": "KDF Salt",
+    "keyNonce": "Your nonce",
+    "createdAt": "time, example: '2026-07-28T19:56:51.855208Z'"
 }  
 ```
 
@@ -92,11 +105,11 @@ Outcome:
 Outcome:  
 ```json
 {  
-    "UserId": "UUID of profile",  
-    "Name": "Name",  
-    "UserName": "User Name",  
-    "PubKey": "Public key",
-    "CreatedAt": "time, example: '2026-07-28T19:56:51.855208Z'"
+    "userId": "UUID of profile",  
+    "name": "Name",  
+    "userName": "User Name",  
+    "pubKey": "Public key",
+    "createdAt": "time, example: '2026-07-28T19:56:51.855208Z'"
 }  
 ```
 
@@ -113,15 +126,15 @@ Outcome:
 ```json
 [
     {
-        "ChatId": "UUID",
-        "Members": [
+        "chatId": "UUID",
+        "members": [
             {
-                "UserId": "UUID", 
-                "Name": "Name",
-                "JoinedAt": "Time"
+                "userId": "UUID", 
+                "name": "Name",
+                "joinedAt": "Time"
             }, ...
         ]
-        "LastMessage": MessageOutcomeBody (can be null)
+        "lastMessage": MessageOutcomeBody (can be null)
     }, ...
 ]  
 ```  
@@ -130,13 +143,13 @@ Outcome:
 Income:  
 ```json
 {  
-    "UserId": "User UUID to create with"  
+    "userId": "User UUID to create with"  
 }  
 ```
 Outcome:  
 ```json
 {  
-    "ChatId": "Chat UUID"  
+    "chatId": "Chat UUID"  
 }  
 ```
 
@@ -144,13 +157,13 @@ Outcome:
 Income:  
 ```json
 {  
-    "Message": "Message text"  
+    "message": "Message text"  
 }  
 ```
 Outcome:  
 ```json
 {  
-    "MessageId": "MessageId UUIDv7"  
+    "messageId": "MessageId UUIDv7"  
 }
 ```
 
@@ -169,12 +182,12 @@ Outcome:
 Outcome:  
 ```json
 {  
-    "CreatedAt": "Time when it was created",
-    "Members": [
+    "createdAt": "Time when it was created",
+    "members": [
         {
-            "UserId": "UUID", 
-            "Name": "Name",
-            "JoinedAt": "Time"
+            "userId": "UUID", 
+            "name": "Name",
+            "joinedAt": "Time"
         }, ...
     ]
 }
@@ -190,7 +203,7 @@ Outcome:
 Income:  
 ```json
 {  
-    "Message": "Message text"  
+    "message": "Message text"  
 }
 ```
 

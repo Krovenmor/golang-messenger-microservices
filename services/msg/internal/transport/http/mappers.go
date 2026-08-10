@@ -41,9 +41,59 @@ func ToPublicProfileBody(p *service.Profile) *ProfilePublicBody {
 	}
 }
 
-func ToServiceMsg(m *PostMessageIncomeBody, userId uuid.UUID) *service.Message {
-	return &service.Message{
-		SenderId: userId,
-		Message:  &m.Msg,
+func ToServicePostMsg(m *PostMessageRequestBody, userId uuid.UUID) *service.ToPostMessage {
+	return &service.ToPostMessage{
+		SenderId:    userId,
+		Message:     m.Msg,
+		SenderKey:   m.Skey,
+		ReceiverKey: m.Rkey,
+		Nonce:       m.Nonce,
 	}
+}
+
+func FromServiceFullChatInfo(c service.ChatFullInfo) FullChatsInfoResponseBody {
+	return FullChatsInfoResponseBody{
+		ChatId:      c.ChatId,
+		CreatedAt:   c.CreatedAt,
+		Members:     c.Members,
+		LastMessage: c.LastMessage,
+	}
+}
+
+func MapSlice[T any, R any](input []T, mapFunc func(T) R) []R {
+	result := make([]R, len(input))
+	for i, v := range input {
+		result[i] = mapFunc(v)
+	}
+	return result
+}
+
+func FromServiceFullChatsInfo(chats []service.ChatFullInfo) []FullChatsInfoResponseBody {
+	return MapSlice(chats, FromServiceFullChatInfo)
+}
+
+func FromServiceChatInfo(info *service.ChatInfo) *ChatInfoResponseBody {
+	return &ChatInfoResponseBody{
+		CreatedAt: info.CreatedAt,
+		Members:   info.Members,
+	}
+}
+
+func FromServiceMessage(msg service.Message) MessageResponseBody {
+	return MessageResponseBody{
+		MessageId:   msg.MessageId,
+		SenderId:    msg.SenderId,
+		Message:     msg.Message,
+		SenderKey:   msg.SenderKey,
+		ReceiverKey: msg.ReceiverKey,
+		Nonce:       msg.Nonce,
+		CreatedAt:   msg.CreatedAt,
+		IsRedacted:  msg.IsRedacted,
+		IsDeleted:   msg.IsDeleted,
+		RedactedAt:  msg.RedactedAt,
+	}
+}
+
+func FromServiceMessages(msgs []service.Message) []MessageResponseBody {
+	return MapSlice(msgs, FromServiceMessage)
 }
