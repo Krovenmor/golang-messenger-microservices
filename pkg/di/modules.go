@@ -42,3 +42,11 @@ var RedisPublisherModule = fx.Options(
 		redis.NewRedisPublisher,
 	),
 )
+
+var RedisPubSubModule = fx.Options(
+	RedisClientModule,
+	fx.Provide(
+		redis.NewRedisSubscriber,
+		redis.NewRedisPublisher,
+	),
+)
