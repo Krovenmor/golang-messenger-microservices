@@ -2,6 +2,8 @@ package utils
 
 import (
 	"MyMessenger/pkg/jwt"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -69,4 +71,9 @@ func GetUuidFromPath(r *http.Request, key string) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("bad %q UUID", key)
 	}
 	return cUUID, nil
+}
+
+func Hash(data string) string {
+	hash := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(hash[:])
 }
