@@ -14,7 +14,7 @@ type MessageService interface {
 
 	PostMessage(ctx context.Context, chatId uuid.UUID, msg ToPostMessage) (uuid.UUID, error)
 	GetMessage(ctx context.Context, chatId, msgId uuid.UUID) (*Message, error)
-	RedactMessage(ctx context.Context, chatId, msgId, userId uuid.UUID, newText string) error
+	RedactMessage(ctx context.Context, chatId, msgId uuid.UUID, msg ToPostMessage) error
 	DelMessage(ctx context.Context, chatId, msgId, userId uuid.UUID) error
 
 	CreateNewChat(ctx context.Context, fUser, sUser uuid.UUID) (uuid.UUID, error)

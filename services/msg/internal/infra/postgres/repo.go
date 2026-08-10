@@ -86,8 +86,10 @@ func (r *PostagreRepo) GetMessage(ctx context.Context, chatId, msgId uuid.UUID) 
 	return msg, nil
 }
 
-func (r *PostagreRepo) RedactMessage(ctx context.Context, chatId, msgId, userId uuid.UUID, newText string) error {
-	t, err := r.pool.Exec(ctx, r.q.UpdateMessage, chatId, msgId, userId, newText)
+func (r *PostagreRepo) RedactMessage(ctx context.Context, chatId, msgId uuid.UUID, msg *service.ToPostMessage) error {
+	t, err := r.pool.Exec(ctx, r.q.UpdateMessage,
+		chatId, msgId, msg.UserId, msg.Message, msg.ReceiverKey, msg.SenderKey, msg.Nonce,
+	)
 	if err != nil {
 		return getErrorMsg(err)
 	}

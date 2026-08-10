@@ -8,7 +8,7 @@ import (
 )
 
 type ToPostMessage struct {
-	SenderId    uuid.UUID
+	UserId      uuid.UUID
 	Message     string
 	SenderKey   string
 	ReceiverKey string

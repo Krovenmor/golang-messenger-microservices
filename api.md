@@ -156,9 +156,12 @@ Outcome:
 - **"POST /api/msg/chat/{ChatId}"** - post a message to a chat  
 Income:  
 ```json
-{  
-    "message": "Message text"  
-}  
+{   
+    "message": "Message text P1",
+    "senderKey": "key",
+    "receiverKey": "key",
+    "nonce": "nonce"
+} 
 ```
 Outcome:  
 ```json
@@ -202,9 +205,12 @@ Outcome:
 - **"PUT /api/msg/chat/{ChatId}/message/{MessageId}"** - change message text  
 Income:  
 ```json
-{  
-    "message": "Message text"  
-}
+{   
+    "message": "Message text P1",
+    "senderKey": "key",
+    "receiverKey": "key",
+    "nonce": "nonce"
+} 
 ```
 
 - **"DELETE /api/msg/chat/{ChatId}/message/{MessageId}"** - delete message from chat  

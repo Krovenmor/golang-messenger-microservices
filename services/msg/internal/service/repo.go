@@ -23,6 +23,6 @@ type MessageRepo interface {
 
 	NewMessage(ctx context.Context, chatId uuid.UUID, msg *Message) error
 	GetMessage(ctx context.Context, chatId, msgId uuid.UUID) (*Message, error)
-	RedactMessage(ctx context.Context, chatId, msgId, userId uuid.UUID, newText string) error
+	RedactMessage(ctx context.Context, chatId, msgId uuid.UUID, msg *ToPostMessage) error
 	DelMessage(ctx context.Context, chatId, msgId, userId uuid.UUID) error
 }

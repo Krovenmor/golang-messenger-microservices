@@ -94,8 +94,8 @@ func (m *MessageServiceImpl) checkProfile(p *Profile) error {
 	return nil
 }
 
-func (m *MessageServiceImpl) checkMessage(msg *ToPostMessage) error {
-	if msg.SenderId == uuid.Nil {
+func (m *MessageServiceImpl) checkMessagePost(msg *ToPostMessage) error {
+	if msg.UserId == uuid.Nil {
 		return fmt.Errorf("Bad Sender UUID")
 	}
 	if len(msg.ReceiverKey) != m.conf.MsgKeysLen {

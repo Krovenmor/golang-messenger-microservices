@@ -68,7 +68,7 @@ func (m *MessageServiceImpl) CreateNewChat(ctx context.Context, fUser, sUser uui
 }
 
 func (m *MessageServiceImpl) PostMessage(ctx context.Context, chatId uuid.UUID, msg ToPostMessage) (uuid.UUID, error) {
-	if err := m.checkMessage(&msg); err != nil {
+	if err := m.checkMessagePost(&msg); err != nil {
 		return uuid.Nil, err
 	}
 	msgId, err := uuid.NewV7()
@@ -77,7 +77,7 @@ func (m *MessageServiceImpl) PostMessage(ctx context.Context, chatId uuid.UUID, 
 	}
 	rMsg := Message{
 		MessageId:   msgId,
-		SenderId:    msg.SenderId,
+		SenderId:    msg.UserId,
 		Message:     &msg.Message,
 		SenderKey:   msg.SenderKey,
 		ReceiverKey: msg.ReceiverKey,
@@ -95,11 +95,12 @@ func (m *MessageServiceImpl) GetMessage(ctx context.Context, chatId, msgId uuid.
 	return m.repo.GetMessage(ctx, chatId, msgId)
 }
 
-func (m *MessageServiceImpl) RedactMessage(ctx context.Context, chatId, msgId, userId uuid.UUID, newText string) error {
-	if err := m.checkMessageText(newText); err != nil {
+func (m *MessageServiceImpl) RedactMessage(ctx context.Context, chatId, msgId uuid.UUID, msg ToPostMessage) error {
+	err := m.checkMessagePost(&msg)
+	if err != nil {
 		return err
 	}
-	err := m.repo.RedactMessage(ctx, chatId, msgId, userId, newText)
+	err = m.repo.RedactMessage(ctx, chatId, msgId, &msg)
 	if err != nil {
 		return err
 	}

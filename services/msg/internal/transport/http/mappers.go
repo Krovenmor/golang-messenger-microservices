@@ -43,7 +43,7 @@ func ToPublicProfileBody(p *service.Profile) *ProfilePublicBody {
 
 func ToServicePostMsg(m *PostMessageRequestBody, userId uuid.UUID) *service.ToPostMessage {
 	return &service.ToPostMessage{
-		SenderId:    userId,
+		UserId:      userId,
 		Message:     m.Msg,
 		SenderKey:   m.Skey,
 		ReceiverKey: m.Rkey,

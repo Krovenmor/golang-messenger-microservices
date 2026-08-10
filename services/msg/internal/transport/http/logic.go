@@ -232,7 +232,7 @@ func (h *Handler) ChangeMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	msg, err := recv[ChangeMessageRequestBody](w, r)
+	msg, err := recv[PostMessageRequestBody](w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -242,7 +242,7 @@ func (h *Handler) ChangeMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	err = h.msg.RedactMessage(r.Context(), chatId, msgId, userId, msg.Msg)
+	err = h.msg.RedactMessage(r.Context(), chatId, msgId, *ToServicePostMsg(msg, userId))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
