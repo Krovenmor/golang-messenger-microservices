@@ -2,6 +2,7 @@ package service
 
 import (
 	j "MyMessenger/pkg/jwt"
+	"MyMessenger/pkg/utils"
 	"MyMessenger/services/auth/internal/config"
 	"context"
 	"log"
@@ -93,7 +94,7 @@ func (a *JwtAuth) newTokens(ctx context.Context, userId uuid.UUID) (*Tokens, err
 		log.Printf("newTokens: Trouble with generating rToken for user %q, err: %q", userId.String(), err)
 		return nil, ErrInternal
 	}
-	err = a.repo.SaveRefresh(ctx, userId, rToken, time.Now().UTC().Add(a.conf.RefreshTokenTTL))
+	err = a.repo.SaveRefresh(ctx, userId, utils.Hash(rToken), time.Now().UTC().Add(a.conf.RefreshTokenTTL))
 	if err != nil {
 		log.Printf("newTokens: Trouble with saving rToken for user %q, err: %q", userId.String(), err)
 		return nil, ErrInternal
@@ -129,10 +130,11 @@ func (a *JwtAuth) UpdateTokens(ctx context.Context, rToken string) (*Tokens, err
 		log.Printf("UpdateTokens: Trouble with uuid.Parse, err: %q", err)
 		return nil, ErrInternal
 	}
-	err = a.repo.FindRefresh(ctx, userId, rToken)
+	hashedRToken := utils.Hash(rToken)
+	err = a.repo.FindRefresh(ctx, userId, hashedRToken)
 	if err != nil {
 		log.Printf("UpdateTokens: Trouble with FindRefresh, userId: %q, err: %q", userId.String(), err)
-		return nil, err
+		return nil, ErrBadData
 	}
 	if time.Now().UTC().After(claims.ExpiresAt.Time) {
 		return nil, ErrBadData
@@ -141,9 +143,13 @@ func (a *JwtAuth) UpdateTokens(ctx context.Context, rToken string) (*Tokens, err
 	if err != nil {
 		return nil, err
 	}
-	err = a.repo.DeleteRefresh(ctx, userId, rToken)
+	err = a.repo.DeleteRefresh(ctx, userId, hashedRToken)
 	if err != nil {
 		log.Printf("UpdateTokens: Trouble with DeleteRefresh, userId: %q, err: %q", userId.String(), err)
 	}
 	return nTokens, nil
+}
+
+func (a *JwtAuth) GetInfo(ctx context.Context, userId uuid.UUID) (*UserInfo, error) {
+	return a.repo.GetUserInfo(ctx, userId)
 }

@@ -12,6 +12,7 @@ type AuthRepo interface {
 	AddNewUser(ctx context.Context, userId uuid.UUID, login, password string) error
 	GetUser(ctx context.Context, login string) (uuid.UUID, string, error)
 	IsUserExists(ctx context.Context, login string) error
+	GetUserInfo(ctx context.Context, userId uuid.UUID) (*UserInfo, error)
 
 	SaveRefresh(ctx context.Context, userId uuid.UUID, rToken string, expAt time.Time) error
 	FindRefresh(ctx context.Context, userId uuid.UUID, rToken string) error

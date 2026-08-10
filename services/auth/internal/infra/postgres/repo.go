@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"MyMessenger/services/auth/internal/infra/postgres/queries"
+	"MyMessenger/services/auth/internal/service"
 	"context"
 	"fmt"
 	"time"
@@ -48,6 +49,15 @@ func (p *PostagreRepo) GetUser(ctx context.Context, login string) (uuid.UUID, st
 		return userId, password, betterError(err)
 	}
 	return userId, password, nil
+}
+
+func (p *PostagreRepo) GetUserInfo(ctx context.Context, userId uuid.UUID) (*service.UserInfo, error) {
+	var info service.UserInfo
+	err := p.pool.QueryRow(ctx, p.q.GetUserInfo, userId).Scan(&info.Login, &info.RTokens)
+	if err != nil {
+		return nil, betterError(err)
+	}
+	return &info, nil
 }
 
 func (p *PostagreRepo) IsUserExists(ctx context.Context, login string) error {

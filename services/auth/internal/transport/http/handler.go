@@ -2,16 +2,23 @@ package http
 
 import (
 	"MyMessenger/services/auth/internal/service"
+	"context"
 	"log"
 	"net/http"
 )
 
-type Handler struct {
-	auth service.AuthService
+type BanChecker interface {
+	CheckLoginBanned(ctx context.Context, login string) bool
+	CheckTokenBanned(ctx context.Context, rToken string) bool
 }
 
-func NewHandler(auth service.AuthService) *Handler {
-	return &Handler{auth: auth}
+type Handler struct {
+	auth       service.AuthService
+	banChecker BanChecker
+}
+
+func NewHandler(auth service.AuthService, banChecker BanChecker) *Handler {
+	return &Handler{auth: auth, banChecker: banChecker}
 }
 
 func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {

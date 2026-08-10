@@ -23,6 +23,7 @@ type Queries struct {
 	DelRefresh      string
 	ClrExpRefresh   string
 	CheckUserExists string
+	GetUserInfo     string
 }
 
 func GetQueries() (*Queries, error) {
@@ -44,6 +45,7 @@ func GetQueries() (*Queries, error) {
 		DelRefresh:      get("delete_refresh"),
 		ClrExpRefresh:   get("clear_expired_refresh_tokens"),
 		CheckUserExists: get("check_user_exists"),
+		GetUserInfo:     get("get_user_info"),
 	}
 
 	return &q, err

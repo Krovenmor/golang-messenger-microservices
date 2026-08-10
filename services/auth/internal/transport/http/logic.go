@@ -45,7 +45,13 @@ func (h *Handler) LogIn(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), h.ToStatusCode(err))
 		return
 	}
-	tokens, err := h.auth.LogIn(r.Context(), body.Login, body.Password)
+	ctx := r.Context()
+	if h.banChecker.CheckLoginBanned(ctx, body.Login) {
+		log.Printf("LogIn: banned login: %q", body.Login)
+		http.Error(w, "", http.StatusBadRequest)
+		return
+	}
+	tokens, err := h.auth.LogIn(ctx, body.Login, body.Password)
 	if err != nil {
 		http.Error(w, err.Error(), h.ToStatusCode(err))
 		return
@@ -57,6 +63,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	body, err := utils.Recv[TokensUpdateIncome](r)
 	if err != nil {
 		http.Error(w, err.Error(), h.ToStatusCode(err))
+		return
+	}
+	ctx := r.Context()
+	if h.banChecker.CheckTokenBanned(ctx, body.RToken) {
+		log.Printf("Update: banned token")
+		http.Error(w, "", http.StatusBadRequest)
 		return
 	}
 	tokens, err := h.auth.UpdateTokens(r.Context(), body.RToken)

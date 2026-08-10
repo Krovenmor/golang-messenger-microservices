@@ -87,10 +87,8 @@ func (h *argon2idHasher) Comp(password, hash string) error {
 		return ErrInvalidVersion
 	}
 
-	var Iterations, Memory uint32
-	var Parallelism uint8
-
-	_, err = fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &Memory, &Iterations, &Parallelism)
+	var mem, iter, par int
+	_, err = fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &mem, &iter, &par)
 	if err != nil {
 		log.Printf("Comp: invalid params, err: %q", err)
 		return ErrInvalidParams
@@ -113,9 +111,9 @@ func (h *argon2idHasher) Comp(password, hash string) error {
 	comparisonHash := argon2.IDKey(
 		[]byte(password),
 		salt,
-		Iterations,
-		Memory,
-		Parallelism,
+		uint32(iter),
+		uint32(mem),
+		uint8(par),
 		KeyLength,
 	)
 
