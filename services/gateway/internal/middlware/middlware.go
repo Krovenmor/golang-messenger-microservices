@@ -36,6 +36,7 @@ func NewMiddleware(
 	repoFab func(prefix string) MiddlewareRepo,
 	cacheFab func() MiddlewareCache,
 	sub Subscriber,
+	pub Publisher,
 	checker *jwt.JWTChecker,
 	confC *stdconfig.RedisChannelsConfig, confM *config.MiddlewareConfig,
 ) (*Middleware, error) {
@@ -62,7 +63,7 @@ func NewMiddleware(
 		checker: checker,
 	}
 
-	registerReader(lf, sub, confC.UserBanChannel, repoBansId, m.getBanTtl)
+	registerReader(lf, sub, pub, confC.UserBanRequestChannel, repoBansId, m.getBanTtl)
 	return m, nil
 }
 
@@ -100,8 +101,12 @@ func (m *Middleware) LimitMiddleware(h http.Handler) http.Handler {
 		}
 
 		if !limiter.Allow() {
-			log.Printf("New ban for addr: %q", addr)
-			m.repoBansAddr.Put(ctx, addr, m.getBanTtl(TooManyRequestsIp))
+			err := m.repoBansAddr.Put(ctx, addr, m.getBanTtl(TooManyRequestsIp))
+			if err != nil {
+				log.Printf("LimitMiddleware: trouble with saving ban for addr: %q, err: %q", addr, err)
+			} else {
+				log.Printf("New ban for addr: %q", addr)
+			}
 			http.Error(w, "", http.StatusTooManyRequests)
 			return
 		}
@@ -119,12 +124,12 @@ func (m *Middleware) QueryParamMiddleware(h http.Handler, param string) http.Han
 			token := r.URL.Query().Get(param)
 			err := m.checkToken(r.Context(), token)
 			if err != nil {
-				log.Printf("QueryParamMiddleware: failed for token: %q", token)
+				log.Printf("QueryParamMiddleware: failed, err: %q", err)
 				http.Error(w, err.Error(), getStatusFromError(err))
 				return
 			}
 
-			log.Printf("QueryParamMiddleware: passed for token: %q", token)
+			log.Print("QueryParamMiddleware: passed")
 			h.ServeHTTP(w, r)
 		}),
 	)
@@ -142,12 +147,12 @@ func (m *Middleware) FullMiddleware(h http.Handler) http.Handler {
 			}
 			err = m.checkToken(r.Context(), token)
 			if err != nil {
-				log.Printf("FullMiddleware: failed for token: %q", token)
+				log.Printf("FullMiddleware: failed, err: %q", err)
 				http.Error(w, err.Error(), getStatusFromError(err))
 				return
 			}
 
-			log.Printf("FullMiddleware: passed for token: %q", token)
+			log.Print("FullMiddleware: passed")
 			h.ServeHTTP(w, r)
 		}),
 	)

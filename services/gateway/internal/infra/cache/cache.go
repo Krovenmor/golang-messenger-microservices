@@ -1,4 +1,4 @@
-package infra
+package cache
 
 import (
 	"MyMessenger/services/gateway/internal/config"

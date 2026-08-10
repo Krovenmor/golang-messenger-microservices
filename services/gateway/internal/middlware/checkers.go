@@ -2,6 +2,7 @@ package middlware
 
 import (
 	"MyMessenger/pkg/jwt"
+	"MyMessenger/pkg/utils"
 	"context"
 	"log"
 	"strings"
@@ -77,8 +78,13 @@ func (m *Middleware) checkToken(ctx context.Context, token string) error {
 
 	banTtl, err := m.checkForBanId(ctx, claims)
 	if err != nil {
-		m.repoTokens.Put(ctx, token, banTtl)
-		log.Printf("checkToken: new token in repoTokens %q", token)
+		hashed := utils.Hash(token)
+		err := m.repoTokens.Put(ctx, hashed, banTtl)
+		if err != nil {
+			log.Printf("checkToken: trouble with saving token, token: %q, err: %q", hashed, err)
+		} else {
+			log.Printf("checkToken: new token in repoTokens %q", hashed)
+		}
 		return ErrBanned
 	}
 

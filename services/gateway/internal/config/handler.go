@@ -27,8 +27,7 @@ type MiddlewareConfig struct {
 }
 
 type InfraConfig struct {
-	CacheSize           int
-	TickerCleanerTiming time.Duration
+	CacheSize int
 }
 
 func GetMainHandlerConfig() (*MainHandlerConfig, error) {
@@ -68,8 +67,7 @@ func GetInfraConfig() (*InfraConfig, error) {
 	r := config.NewConfigReader()
 
 	conf := InfraConfig{
-		CacheSize:           r.GetInt("INFRA_CACHE_SIZE"),
-		TickerCleanerTiming: r.GetDuration("INFRA_TICKER_TIMING"),
+		CacheSize: r.GetInt("CACHE_SIZE"),
 	}
 
 	return &conf, r.Err()

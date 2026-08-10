@@ -4,8 +4,10 @@ import (
 	stdconfig "MyMessenger/pkg/config"
 	"MyMessenger/pkg/di"
 	pkgredis "MyMessenger/pkg/redis"
+	"MyMessenger/pkg/redis/redis_repo"
 	"MyMessenger/services/gateway/internal/config"
-	"MyMessenger/services/gateway/internal/infra"
+	"MyMessenger/services/gateway/internal/infra/cache"
+	"MyMessenger/services/gateway/internal/infra/pub"
 	"MyMessenger/services/gateway/internal/middlware"
 	web "MyMessenger/services/gateway/internal/transport/http"
 	"log"
@@ -25,7 +27,7 @@ func provideSub(sub *pkgredis.RedisSubscriber) middlware.Subscriber {
 }
 
 func provideRepoFactory(rd *redis.Client) func(prefix string) middlware.MiddlewareRepo {
-	rf := infra.NewRedisRepoFactory(rd, appPrefix)
+	rf := redis_repo.NewRedisRepoFactory(rd, appPrefix)
 	return func(prefix string) middlware.MiddlewareRepo {
 		return rf.NewRedisRepo(prefix)
 	}
@@ -33,7 +35,7 @@ func provideRepoFactory(rd *redis.Client) func(prefix string) middlware.Middlewa
 
 func provideCacheFactory(conf *config.InfraConfig) func() middlware.MiddlewareCache {
 	return func() middlware.MiddlewareCache {
-		cache, err := infra.NewLruCache(conf)
+		cache, err := cache.NewLruCache(conf)
 		if err != nil {
 			log.Fatalf("Trouble with NewLruCache, err: %q", err)
 		}
@@ -41,11 +43,15 @@ func provideCacheFactory(conf *config.InfraConfig) func() middlware.MiddlewareCa
 	}
 }
 
+func providePublisher(publisher *pkgredis.RedisPublisher, conf *stdconfig.RedisChannelsConfig) middlware.Publisher {
+	return pub.NewRedisPublisher(publisher, conf)
+}
+
 func GetModule() fx.Option {
 	return fx.Options(
 
 		di.AuthenticatorModule,
-		di.RedisSubscriberModule,
+		di.RedisPubSubModule,
 
 		// Configs
 		fx.Provide(
@@ -61,16 +67,13 @@ func GetModule() fx.Option {
 			provideSub,
 			provideCacheFactory,
 			provideRepoFactory,
+			providePublisher,
 			middlware.NewMiddleware,
-		),
-
-		// ServeMux
-		fx.Provide(
-			http.NewServeMux,
 		),
 
 		// Handler
 		fx.Provide(
+			http.NewServeMux,
 			web.NewMainHandler,
 			(*web.MainHandler).RegisterRoutes,
 		),
