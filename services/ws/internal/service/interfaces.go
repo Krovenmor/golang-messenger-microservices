@@ -28,7 +28,7 @@ type Connector interface {
 
 type Publisher interface {
 	PublishUserStatus(ctx context.Context, status broker.StatusPayload)
-	PublishBanEvent(ctx context.Context, payload broker.BanEventPayload)
+	PublishBanEvent(ctx context.Context, payload broker.BanRequestPayload)
 }
 
 type Subscriber interface {

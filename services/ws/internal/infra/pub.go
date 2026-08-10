@@ -19,7 +19,7 @@ func NewPublisher(pub *redis.RedisPublisher, conf *config.RedisChannelsConfig) *
 	return &RedisPublisher{
 		pub:               pub,
 		userStatusPattern: conf.UserStatusPattern,
-		banChannel:        conf.UserBanChannel,
+		banChannel:        conf.UserBanRequestChannel,
 	}
 }
 
@@ -33,9 +33,9 @@ func (p *RedisPublisher) PublishUserStatus(ctx context.Context, status broker.St
 	log.Printf("Published new status, channel: %q, event: %v, err: %v", channel, event, err)
 }
 
-func (p *RedisPublisher) PublishBanEvent(ctx context.Context, payload broker.BanEventPayload) {
+func (p *RedisPublisher) PublishBanEvent(ctx context.Context, payload broker.BanRequestPayload) {
 	event := broker.Event{
-		Type:    broker.BanEvent,
+		Type:    broker.BanRequest,
 		Payload: payload,
 	}
 	err := p.pub.PublishEvent(ctx, p.banChannel, event)

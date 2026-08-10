@@ -225,7 +225,7 @@ func (s *wsWorker) isNormalError(err error) bool {
 }
 
 func (s *wsWorker) banUser() {
-	s.pub.PublishBanEvent(s.ctx, broker.BanEventPayload{
+	s.pub.PublishBanEvent(s.ctx, broker.BanRequestPayload{
 		UserId: s.userId,
 		Reason: broker.TooManyRequests,
 	})
