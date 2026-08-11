@@ -8,6 +8,11 @@ import (
 	"net/http"
 )
 
+func sendTokens(w http.ResponseWriter, tokens *service.Tokens) {
+	tB := TokensResponseBody{AToken: tokens.AccessToken, RToken: tokens.RefreshToken}
+	utils.Send(w, &tB)
+}
+
 func (h *Handler) ToStatusCode(err error) int {
 	switch {
 	case errors.Is(err, service.ErrBadData):
@@ -21,7 +26,7 @@ func (h *Handler) ToStatusCode(err error) int {
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	body, err := utils.Recv[AuthIncomeBody](r)
+	body, err := utils.Recv[AuthRequestBody](r)
 	if err != nil {
 		http.Error(w, err.Error(), h.ToStatusCode(err))
 		return
@@ -34,14 +39,10 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-func sendTokens(w http.ResponseWriter, tokens *service.Tokens) {
-	tB := TokensOutcomeBody{AToken: tokens.AccessToken, RToken: tokens.RefreshToken}
-	utils.Send(w, &tB)
-}
-
 func (h *Handler) LogIn(w http.ResponseWriter, r *http.Request) {
-	body, err := utils.Recv[AuthIncomeBody](r)
+	body, err := utils.Recv[AuthRequestBody](r)
 	if err != nil {
+		log.Printf("utils.Recv err: %q", err)
 		http.Error(w, err.Error(), h.ToStatusCode(err))
 		return
 	}
@@ -60,7 +61,7 @@ func (h *Handler) LogIn(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	body, err := utils.Recv[TokensUpdateIncome](r)
+	body, err := utils.Recv[TokensUpdateRequestBody](r)
 	if err != nil {
 		http.Error(w, err.Error(), h.ToStatusCode(err))
 		return

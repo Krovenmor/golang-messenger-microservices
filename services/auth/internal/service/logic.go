@@ -6,7 +6,6 @@ import (
 	"MyMessenger/services/auth/internal/config"
 	"context"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,40 +30,8 @@ func NewJwtAuth(repo AuthRepo, checker TokenChecker, gen TokenGenerator, hash Au
 	}
 }
 
-func (a *JwtAuth) checkLoginPass(login, password string) error {
-	lLen := len(login)
-	if lLen < a.conf.MinLoginLength {
-		log.Printf("checkLoginPass: login is too short, min len: %d", a.conf.MinLoginLength)
-		return ErrBadData
-	}
-	if lLen > a.conf.MaxLoginLength {
-		log.Printf("checkLoginPass: login is too big, max len: %d", a.conf.MaxLoginLength)
-		return ErrBadData
-	}
-	pLen := len(password)
-	if pLen < a.conf.MinPassLength {
-		log.Printf("checkLoginPass: password is too short, min len: %d", a.conf.MinPassLength)
-		return ErrBadData
-	}
-	if pLen > a.conf.MaxPassLength {
-		log.Printf("checkLoginPass: password is too big, max len: %d", a.conf.MaxPassLength)
-		return ErrBadData
-	}
-	return nil
-}
-
-func (a *JwtAuth) getCheckedLoginPass(login, password string) (string, string, error) {
-	login, password = strings.TrimSpace(login), strings.TrimSpace(password)
-	login = strings.ToLower(login)
-	return login, password, a.checkLoginPass(login, password)
-}
-
 func (a *JwtAuth) Register(ctx context.Context, login, password string) error {
-	login, password, err := a.getCheckedLoginPass(login, password)
-	if err != nil {
-		return err
-	}
-	err = a.repo.IsUserExists(ctx, login)
+	err := a.repo.IsUserExists(ctx, login)
 	if err == nil {
 		log.Printf("Register: user already exists: %q", login)
 		return ErrBadData
@@ -103,10 +70,6 @@ func (a *JwtAuth) newTokens(ctx context.Context, userId uuid.UUID) (*Tokens, err
 }
 
 func (a *JwtAuth) LogIn(ctx context.Context, login, password string) (*Tokens, error) {
-	login, password, err := a.getCheckedLoginPass(login, password)
-	if err != nil {
-		return nil, err
-	}
 	userId, hashed, err := a.repo.GetUser(ctx, login)
 	if err != nil {
 		return nil, ErrBadData

@@ -1,15 +1,23 @@
 package http
 
-type AuthIncomeBody struct {
-	Login    string `json:"login" validate:"required"`
-	Password string `json:"password" validate:"required"`
+//
+//	Requests
+//
+
+type AuthRequestBody struct {
+	Login    string `json:"login" validate:"auth_login"`
+	Password string `json:"password" validate:"auth_password"`
 }
 
-type TokensOutcomeBody struct {
+type TokensUpdateRequestBody struct {
+	RToken string `json:"refreshToken" validate:"refresh_token"`
+}
+
+//
+//	Responses
+//
+
+type TokensResponseBody struct {
 	AToken string `json:"accessToken"`
 	RToken string `json:"refreshToken"`
-}
-
-type TokensUpdateIncome struct {
-	RToken string `json:"refreshToken" validate:"required"`
 }

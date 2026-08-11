@@ -52,6 +52,10 @@ func GetModule() fx.Option {
 			stdconfig.GetRedisChannelsConfig,
 		),
 
+		fx.Invoke(
+			config.SetupValidator,
+		),
+
 		// Pool
 		fx.Provide(
 			repo.NewPool,
