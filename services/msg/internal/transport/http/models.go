@@ -31,10 +31,6 @@ type PostMessageRequestBody struct {
 	Nonce string `json:"nonce" validate:"message_nonce"`
 }
 
-type ChangeMessageRequestBody struct {
-	Msg string `json:"message" validate:"required"`
-}
-
 //
 // Responses
 //
