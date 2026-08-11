@@ -23,7 +23,7 @@ func (h *Handler) HandleGetStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userStatus := h.stService.GetStatus(r.Context(), userId.String())
-	utils.Send(w, &userStatus)
+	utils.Send(w, FromServiceStatus(&userStatus))
 }
 
 func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {

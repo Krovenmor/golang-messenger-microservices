@@ -342,8 +342,8 @@ Outcome: (Example)
 Outcome: (Example)
 ```json
 {
-    "Status": 1,
-    "LastSeen": 1785881345
+    "status": 1,
+    "lastSeen": 1785881345
 }
 ```
 Statuses:  
