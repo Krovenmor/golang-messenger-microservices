@@ -14,7 +14,7 @@ import (
 const DEF_QUANTITY_QUERIES = 10
 
 func (h *Handler) NewProfile(w http.ResponseWriter, r *http.Request) {
-	profile, err := recv[ProfileBody](w, r)
+	profile, err := recv[NewProfileRequestBody](w, r)
 	if err != nil {
 		return
 	}
@@ -47,7 +47,7 @@ func (h *Handler) GetProfilePrivate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Trouble with getting profile", http.StatusInternalServerError)
 		return
 	}
-	utils.Send(w, FromServiceProfile(profile))
+	utils.Send(w, ToPrivateProfileBody(profile))
 }
 
 func (h *Handler) GetProfilePublic(w http.ResponseWriter, r *http.Request) {

@@ -27,10 +27,6 @@ func NewMessageServiceImpl(repo MessageRepo, pub EventPublisher, conf *config.Me
 }
 
 func (m *MessageServiceImpl) NewProfile(ctx context.Context, profile Profile) error {
-	err := m.checkProfile(&profile)
-	if err != nil {
-		return err
-	}
 	return m.repo.NewProfile(ctx, &profile)
 }
 
@@ -39,10 +35,6 @@ func (m *MessageServiceImpl) GetProfileById(ctx context.Context, userId uuid.UUI
 }
 
 func (m *MessageServiceImpl) GetProfileByUserName(ctx context.Context, username string) (*Profile, error) {
-	err := m.checkProfileUserName(username)
-	if err != nil {
-		return nil, err
-	}
 	return m.repo.GetProfileByUserName(ctx, username)
 }
 
@@ -52,7 +44,7 @@ func (m *MessageServiceImpl) IsProfileInChat(ctx context.Context, userId, chatId
 
 func (m *MessageServiceImpl) CreateNewChat(ctx context.Context, fUser, sUser uuid.UUID) (uuid.UUID, error) {
 	if fUser == sUser {
-		return uuid.Nil, fmt.Errorf("Can't create chat with fUUID == sUUID")
+		return uuid.Nil, fmt.Errorf("can't create chat with fUUID == sUUID")
 	}
 	chatId, err := m.repo.IsProfilesHaveAPrivateChat(ctx, fUser, sUser)
 	if err == nil {
@@ -68,12 +60,9 @@ func (m *MessageServiceImpl) CreateNewChat(ctx context.Context, fUser, sUser uui
 }
 
 func (m *MessageServiceImpl) PostMessage(ctx context.Context, chatId uuid.UUID, msg ToPostMessage) (uuid.UUID, error) {
-	if err := m.checkMessagePost(&msg); err != nil {
-		return uuid.Nil, err
-	}
 	msgId, err := uuid.NewV7()
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("Trouble with gen UUID for new message: %w", err)
+		return uuid.Nil, fmt.Errorf("trouble with gen UUID for new message: %w", err)
 	}
 	rMsg := Message{
 		MessageId:   msgId,
@@ -96,11 +85,7 @@ func (m *MessageServiceImpl) GetMessage(ctx context.Context, chatId, msgId uuid.
 }
 
 func (m *MessageServiceImpl) RedactMessage(ctx context.Context, chatId, msgId uuid.UUID, msg ToPostMessage) error {
-	err := m.checkMessagePost(&msg)
-	if err != nil {
-		return err
-	}
-	err = m.repo.RedactMessage(ctx, chatId, msgId, &msg)
+	err := m.repo.RedactMessage(ctx, chatId, msgId, &msg)
 	if err != nil {
 		return err
 	}

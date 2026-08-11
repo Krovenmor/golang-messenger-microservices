@@ -33,7 +33,7 @@ func SendWithStatus[T any](w http.ResponseWriter, toSend *T, status int) {
 	}
 }
 
-var validate = validator.New()
+var Validator = validator.New()
 
 func Recv[T any](r *http.Request) (*T, error) {
 	var val T
@@ -43,7 +43,7 @@ func Recv[T any](r *http.Request) (*T, error) {
 	if err != nil {
 		return nil, fmt.Errorf("not valid JSON: %w", err)
 	}
-	err = validate.Struct(&val)
+	err = Validator.Struct(&val)
 	if err != nil {
 		return nil, fmt.Errorf("not valid JSON: %w", err)
 	}

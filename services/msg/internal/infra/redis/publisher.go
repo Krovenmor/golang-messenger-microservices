@@ -6,6 +6,7 @@ import (
 	"MyMessenger/pkg/redis"
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 )
@@ -35,7 +36,10 @@ func (p *publisher) PublishNewChat(ctx context.Context, chatId uuid.UUID, usersT
 			ChatId: chatId.String(),
 		},
 	}
-	redis.PublishEventToGroup(ctx, p.pub, p.pubUserPattern, event, usersTo)
+	err := redis.PublishEventToGroup(ctx, p.pub, p.pubUserPattern, event, usersTo)
+	if err != nil {
+		log.Printf("PublishNewChat: trouble with PublishEventToGroup, err: %q", err)
+	}
 }
 
 func (p *publisher) PublishNewMessage(ctx context.Context, chatId, msgId uuid.UUID) {
@@ -46,7 +50,10 @@ func (p *publisher) PublishNewMessage(ctx context.Context, chatId, msgId uuid.UU
 			MsgId:  msgId.String(),
 		},
 	}
-	p.pub.PublishEvent(ctx, p.toChat(chatId), event)
+	err := p.pub.PublishEvent(ctx, p.toChat(chatId), event)
+	if err != nil {
+		log.Printf("PublishNewMessage: trouble with PublishEvent, err: %q", err)
+	}
 }
 
 func (p *publisher) PublishMessageWasRedacted(ctx context.Context, chatId, msgId uuid.UUID) {
@@ -57,7 +64,10 @@ func (p *publisher) PublishMessageWasRedacted(ctx context.Context, chatId, msgId
 			MsgId:  msgId.String(),
 		},
 	}
-	p.pub.PublishEvent(ctx, p.toChat(chatId), event)
+	err := p.pub.PublishEvent(ctx, p.toChat(chatId), event)
+	if err != nil {
+		log.Printf("PublishMessageWasRedacted: trouble with PublishEvent, err: %q", err)
+	}
 }
 
 func (p *publisher) PublishMessageWasDeleted(ctx context.Context, chatId, msgId uuid.UUID) {
@@ -68,5 +78,8 @@ func (p *publisher) PublishMessageWasDeleted(ctx context.Context, chatId, msgId 
 			MsgId:  msgId.String(),
 		},
 	}
-	p.pub.PublishEvent(ctx, p.toChat(chatId), event)
+	err := p.pub.PublishEvent(ctx, p.toChat(chatId), event)
+	if err != nil {
+		log.Printf("PublishMessageWasRedacted: trouble with PublishEvent, err: %q", err)
+	}
 }

@@ -70,16 +70,7 @@ func (r *PostagreRepo) NewMessage(ctx context.Context, chatId uuid.UUID, msg *se
 }
 
 func (r *PostagreRepo) GetMessage(ctx context.Context, chatId, msgId uuid.UUID) (*service.Message, error) {
-	//var msg service.Message
-
 	msg, err := repo.GetQueryByPos[service.Message](ctx, r.pool, r.q.GetMessage, chatId, msgId)
-
-	//err := r.pool.QueryRow(ctx, r.q.GetMessage, chatId, msgId).Scan(
-	//	&msg.MessageId, &msg.SenderId,
-	//	&msg.Message, &msg.SenderKey, &msg.ReceiverKey, &msg.Nonce,
-	//	&msg.CreatedAt, &msg.IsRedacted, &msg.IsDeleted, &msg.RedactedAt,
-	//)
-
 	if err != nil {
 		return nil, getErrorMsg(err)
 	}

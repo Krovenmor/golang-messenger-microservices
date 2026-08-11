@@ -30,6 +30,11 @@ func GetModule() fx.Option {
 			config.GetMessageConfig,
 		),
 
+		// Validator
+		fx.Invoke(
+			config.SetupValidator,
+		),
+
 		// Pool
 		fx.Provide(
 			repo.NewPool,

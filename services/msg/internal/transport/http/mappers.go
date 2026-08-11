@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func ToServiceProfile(p *ProfileBody, userId uuid.UUID) *service.Profile {
+func ToServiceProfile(p *NewProfileRequestBody, userId uuid.UUID) *service.Profile {
 	return &service.Profile{
 		UserId:     userId,
 		Name:       p.Name,
@@ -18,8 +18,8 @@ func ToServiceProfile(p *ProfileBody, userId uuid.UUID) *service.Profile {
 	}
 }
 
-func FromServiceProfile(p *service.Profile) *ProfileBody {
-	return &ProfileBody{
+func ToPrivateProfileBody(p *service.Profile) *PrivateProfileResponseBody {
+	return &PrivateProfileResponseBody{
 		UserId:     p.UserId,
 		Name:       p.Name,
 		UserName:   p.UserName,
@@ -31,8 +31,8 @@ func FromServiceProfile(p *service.Profile) *ProfileBody {
 	}
 }
 
-func ToPublicProfileBody(p *service.Profile) *ProfilePublicBody {
-	return &ProfilePublicBody{
+func ToPublicProfileBody(p *service.Profile) *PublicProfileResponseBody {
+	return &PublicProfileResponseBody{
 		UserId:    p.UserId,
 		Name:      p.Name,
 		UserName:  p.UserName,
