@@ -48,6 +48,7 @@ func ToServicePostMsg(m *PostMessageRequestBody, userId uuid.UUID) *service.ToPo
 		SenderKey:   m.Skey,
 		ReceiverKey: m.Rkey,
 		Nonce:       m.Nonce,
+		ReplyToId:   m.ReplyId,
 	}
 }
 
@@ -88,9 +89,9 @@ func FromServiceMessage(msg service.Message) MessageResponseBody {
 		ReceiverKey: msg.ReceiverKey,
 		Nonce:       msg.Nonce,
 		CreatedAt:   msg.CreatedAt,
-		IsRedacted:  msg.IsRedacted,
-		IsDeleted:   msg.IsDeleted,
 		RedactedAt:  msg.RedactedAt,
+		DeletedAt:   msg.DeletedAt,
+		ReplyToId:   msg.ReplyToId,
 	}
 }
 

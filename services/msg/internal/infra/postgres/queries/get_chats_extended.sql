@@ -9,16 +9,16 @@ lastMessage as (
         chat_id,
         created_at,
         json_build_object(
-            'MessageId', message_id,
-            'SenderId', sender_id,
-            'Message', message,
-            'SenderKey', sender_key,
-            'ReceiverKey', receiver_key,
-            'Nonce', nonce,
-            'CreatedAt', created_at,
-            'IsRedacted', is_redacted,
-            'IsDeleted', is_deleted,
-            'RedactedAt', redacted_at
+            'messageId', message_id,
+            'senderId', sender_id,
+            'message', message,
+            'senderKey', sender_key,
+            'receiverKey', receiver_key,
+            'nonce', nonce,
+            'createdAt', created_at,
+            'redactedAt', redacted_at,
+            'deletedAt', deleted_at,
+            'replyToId', reply_to_id
         ) as last_message_json
     from messages
     where chat_id in (select chat_id from chats_ids)

@@ -25,6 +25,16 @@ func (v *ConfigValidator) SetRangesAlias(alias, keyFrom, keyTo string) {
 	)
 }
 
+func (v *ConfigValidator) SetRangesBase64Alias(alias, keyFrom, keyTo string) {
+	if v.Err() != nil {
+		return
+	}
+	v.RegisterAlias(
+		alias,
+		fmt.Sprintf("required,min=%d,max=%d,base64", v.GetInt(keyFrom), v.GetInt(keyTo)),
+	)
+}
+
 func (v *ConfigValidator) SetLenBase64Alias(alias, keyLen string) {
 	if v.Err() != nil {
 		return

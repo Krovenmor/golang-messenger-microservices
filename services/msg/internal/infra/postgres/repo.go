@@ -59,7 +59,7 @@ func (r *PostagreRepo) NewChat(ctx context.Context, chatId, fUser, sUser uuid.UU
 }
 
 func (r *PostagreRepo) NewMessage(ctx context.Context, chatId uuid.UUID, msg *service.Message) error {
-	t, err := r.pool.Exec(ctx, r.q.PostMessage, msg.MessageId, chatId, msg.SenderId, msg.Message, msg.SenderKey, msg.ReceiverKey, msg.Nonce)
+	t, err := r.pool.Exec(ctx, r.q.PostMessage, msg.MessageId, chatId, msg.SenderId, msg.Message, msg.SenderKey, msg.ReceiverKey, msg.Nonce, msg.ReplyToId)
 	if err != nil {
 		return getErrorMsg(err)
 	}

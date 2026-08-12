@@ -13,6 +13,7 @@ type ToPostMessage struct {
 	SenderKey   string
 	ReceiverKey string
 	Nonce       string
+	ReplyToId   *uuid.UUID
 }
 
 type Message struct {
@@ -23,9 +24,9 @@ type Message struct {
 	ReceiverKey string
 	Nonce       string
 	CreatedAt   *time.Time
-	IsRedacted  bool
-	IsDeleted   bool
 	RedactedAt  *time.Time
+	DeletedAt   *time.Time
+	ReplyToId   *uuid.UUID
 }
 
 type Profile struct {

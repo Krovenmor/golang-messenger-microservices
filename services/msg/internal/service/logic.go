@@ -71,6 +71,7 @@ func (m *MessageServiceImpl) PostMessage(ctx context.Context, chatId uuid.UUID, 
 		SenderKey:   msg.SenderKey,
 		ReceiverKey: msg.ReceiverKey,
 		Nonce:       msg.Nonce,
+		ReplyToId:   msg.ReplyToId,
 	}
 	err = m.repo.NewMessage(ctx, chatId, &rMsg)
 	if err != nil {

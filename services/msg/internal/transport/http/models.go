@@ -25,10 +25,11 @@ type NewChatRequestBody struct {
 }
 
 type PostMessageRequestBody struct {
-	Msg   string `json:"message" validate:"message_text"`
-	Skey  string `json:"senderKey" validate:"message_key"`
-	Rkey  string `json:"receiverKey" validate:"message_key"`
-	Nonce string `json:"nonce" validate:"message_nonce"`
+	Msg     string     `json:"message" validate:"message_text"`
+	Skey    string     `json:"senderKey" validate:"message_key"`
+	Rkey    string     `json:"receiverKey" validate:"message_key"`
+	Nonce   string     `json:"nonce" validate:"message_nonce"`
+	ReplyId *uuid.UUID `json:"replyToId,omitempty" validate:"omitempty,uuid"`
 }
 
 //
@@ -82,7 +83,7 @@ type MessageResponseBody struct {
 	ReceiverKey string     `json:"receiverKey"`
 	Nonce       string     `json:"nonce"`
 	CreatedAt   *time.Time `json:"createdAt"`
-	IsRedacted  bool       `json:"isRedacted"`
-	IsDeleted   bool       `json:"isDeleted"`
 	RedactedAt  *time.Time `json:"redactedAt"`
+	DeletedAt   *time.Time `json:"deletedAt"`
+	ReplyToId   *uuid.UUID `json:"replyToId"`
 }

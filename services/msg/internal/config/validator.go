@@ -19,7 +19,7 @@ func setupProfileValidation(r *config.ConfigValidator) {
 
 func setupMessageValidation(r *config.ConfigValidator) {
 
-	r.SetRangesAlias("message_text", "MSG_TEXT_MIN_LEN", "MSG_TEXT_MAX_LEN")
+	r.SetRangesBase64Alias("message_text", "MSG_TEXT_MIN_LEN", "MSG_TEXT_MAX_LEN")
 
 	r.SetLenBase64Alias("message_nonce", "MSG_NONCE_LEN")
 	r.SetLenBase64Alias("message_key", "MSG_KEY_LEN")

@@ -10,9 +10,10 @@ create table if not exists Messages(
     nonce text not null,
 
     created_at timestamptz default now(),
-    is_redacted boolean default false,
-    is_deleted boolean default false,
     redacted_at timestamptz default null,
+    deleted_at timestamptz default null,
+
+    reply_to_id uuid default null references messages(message_id) on delete set null,
 
     foreign key (chat_id, sender_id) references chatmembers(chat_id, user_id)
 );
