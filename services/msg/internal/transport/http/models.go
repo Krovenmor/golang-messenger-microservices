@@ -32,6 +32,10 @@ type PostMessageRequestBody struct {
 	ReplyId *uuid.UUID `json:"replyToId,omitempty" validate:"omitempty,uuid"`
 }
 
+type PostReactionRequestBody struct {
+	Emoji string `json:"emoji" validate:"required,min=1,max=64"`
+}
+
 //
 // Responses
 //
@@ -75,15 +79,21 @@ type ChatInfoResponseBody struct {
 	Members   json.RawMessage `json:"members"`
 }
 
+type ReactionResponseBody struct {
+	Emoji string      `json:"emoji"`
+	Users []uuid.UUID `json:"users"`
+}
+
 type MessageResponseBody struct {
-	MessageId   uuid.UUID  `json:"messageId"`
-	SenderId    uuid.UUID  `json:"senderId"`
-	Message     *string    `json:"message"`
-	SenderKey   string     `json:"senderKey"`
-	ReceiverKey string     `json:"receiverKey"`
-	Nonce       string     `json:"nonce"`
-	CreatedAt   *time.Time `json:"createdAt"`
-	RedactedAt  *time.Time `json:"redactedAt"`
-	DeletedAt   *time.Time `json:"deletedAt"`
-	ReplyToId   *uuid.UUID `json:"replyToId"`
+	MessageId   uuid.UUID              `json:"messageId"`
+	SenderId    uuid.UUID              `json:"senderId"`
+	Message     *string                `json:"message"`
+	SenderKey   string                 `json:"senderKey"`
+	ReceiverKey string                 `json:"receiverKey"`
+	Nonce       string                 `json:"nonce"`
+	CreatedAt   *time.Time             `json:"createdAt"`
+	RedactedAt  *time.Time             `json:"redactedAt"`
+	DeletedAt   *time.Time             `json:"deletedAt"`
+	ReplyToId   *uuid.UUID             `json:"replyToId"`
+	Reactions   []ReactionResponseBody `json:"reactions"`
 }

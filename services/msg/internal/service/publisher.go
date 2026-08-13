@@ -11,4 +11,7 @@ type EventPublisher interface {
 	PublishNewMessage(ctx context.Context, chatId, msgId uuid.UUID)
 	PublishMessageWasRedacted(ctx context.Context, chatId, msgId uuid.UUID)
 	PublishMessageWasDeleted(ctx context.Context, chatId, msgId uuid.UUID)
+
+	PublishNewReaction(ctx context.Context, chatId, msgId, userId uuid.UUID, emoji string)
+	PublishDelReaction(ctx context.Context, chatId, msgId, userId uuid.UUID, emoji string)
 }

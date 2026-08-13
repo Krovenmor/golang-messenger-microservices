@@ -1,0 +1,2 @@
+select emoji
+from emojis

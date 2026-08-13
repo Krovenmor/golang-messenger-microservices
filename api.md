@@ -1,8 +1,6 @@
-**Auth API:**  
--
-
-- **"POST /api/auth/register"** - register a new user  
-Income:
+# **Auth API:**  
+## **"POST /api/auth/register"** - register a new user  
+### Request body:
 ```json
 {
     "login": "YourLogin",
@@ -10,15 +8,15 @@ Income:
 }  
 ```
 
-- **"POST /api/auth/login"** - LogIn, get JWT tokens  
-Income:
+## **"POST /api/auth/login"** - LogIn, get JWT tokens  
+### Request body:
 ```json
 {
     "login": "YourLogin",
     "password": "YourPassword"
 }  
 ```
-Outcome:  
+### Response body  
 ```json
 {
     "accessToken": "YourAccessToken",
@@ -26,14 +24,14 @@ Outcome:
 }  
 ```
 
-- **"POST /api/auth/update"** - Update your tokens  
-Income:
+## **"POST /api/auth/update"** - Update your tokens  
+### Request body:
 ```json
 {
     "refreshToken": "YourRefreshToken"
 }  
 ```
-Outcome:  
+### Response body  
 ```json
 {
     "accessToken": "YourNewAccessToken",
@@ -41,12 +39,11 @@ Outcome:
 }  
 ```
 
-**Message API:**  
--
+# **Message API:**
 **All endpoints works only with JWT token from Auth API**  
 **Usage: Authorization -> Bearer Token -> Access token from AuthApi**  
 
-MessageOutcomeBody:  
+### MessageResponseBody:  
 ```json
 {  
     "messageId": "Message UUIDv7",
@@ -66,12 +63,21 @@ MessageOutcomeBody:
     // UTC timestamp (RFC 3339 format). Set to null if the message not deleted
     "deletedAt": null,
     // Can be null
-    "replyToId": "MessageId UUIDv7"
+    "replyToId": "MessageId UUIDv7",
+    // can be empty (not null)
+    "reactions": [
+        {
+            "emoji": "🌈",
+            "users": [ // Who reacted
+                "98d199b7-0513-4418-8acd-ccb3d4d67575"
+            ]
+        }
+    ]
 }
 ```
 
-- **"POST /api/msg/profile"** - creates a new profile  
-Income:  
+## **"POST /api/msg/profile"** - creates a new profile  
+### Request body:  
 ```json
 {  
     "name": "Your Public Name",
@@ -83,8 +89,8 @@ Income:
 }  
 ```
 
-- **"GET /api/msg/profile"** - get yours profile
-Outcome:  
+## **"GET /api/msg/profile"** - get yours profile
+### Response body  
 ```json
 {  
     "userId": "UUID of profile",
@@ -98,9 +104,9 @@ Outcome:
 }  
 ```
 
-- **"GET /api/msg/profile/{target}"** - get other profile  
+## **"GET /api/msg/profile/{target}"** - get other profile  
 {target} - UserId (UUID) or UserName  
-Outcome:  
+### Response body  
 ```json
 {  
     "userId": "UUID of profile",  
@@ -111,16 +117,16 @@ Outcome:
 }  
 ```
 
-- **"GET /api/msg/profile/chats"** - get all your chats  
-Outcome:  
+## **"GET /api/msg/profile/chats"** - get all your chats  
+### Response body  
 ```json
 [  
     "UUID1", "UUID2", ...  
 ]  
 ```
 
-- **"GET /api/msg/profile/chats/full"** - get all your chats with extended info  
-Outcome:  
+## **"GET /api/msg/profile/chats/full"** - get all your chats with extended info  
+### Response body  
 ```json
 [
     {
@@ -132,27 +138,28 @@ Outcome:
                 "joinedAt": "Time"
             }, ...
         ]
-        "lastMessage": MessageOutcomeBody (can be null)
+        "lastMessage": MessageResponseBody // (can be null), without reactions !
     }, ...
 ]  
 ```  
 
-- **"POST /api/msg/chat/new"** - create a new chat  
-Income:  
+## **"POST /api/msg/chat"** - create a new chat  
+### Request body:  
 ```json
-{  
+{
     "userId": "User UUID to create with"  
 }  
 ```
-Outcome:  
+### Response body  
 ```json
 {  
     "chatId": "Chat UUID"  
 }  
 ```
+- If chat already exists, you will recv ResponseBody and StatusOk 200, if chat was created: ResponseBody and StatusCreated 201
 
-- **"POST /api/msg/chat/{ChatId}"** - post a message to a chat  
-Income:  
+## **"POST /api/msg/chat/{ChatId}"** - post a message to a chat  
+### Request body:  
 ```json
 {   
     "message": "Message text P1",
@@ -163,26 +170,26 @@ Income:
     "replyToId": "MessageId"
 } 
 ```
-Outcome:  
+### Response body  
 ```json
 {  
     "messageId": "MessageId UUIDv7"  
 }
 ```
 
-- **"GET /api/msg/chat/{ChatId}"** - get chat history  
+## **"GET /api/msg/chat/{ChatId}"** - get chat history  
 Query params:  
 'from' - messageId from (UUIDv7) (if you don't provide 'from', you'll get last 'q' messages)
 'q' - quantity (int) (if you don't provide 'q', q will be default = 10)
-Outcome:  
+### Response body  
 ```json
 [  
-    MessageOutcomeBody, ...  
+    MessageResponseBody, ...
 ]  
 ```
 
-- **"GET /api/msg/chat/{ChatId}/info"** - get chat info  
-Outcome:  
+## **"GET /api/msg/chat/{ChatId}/info"** - get chat info  
+### Response body  
 ```json
 {  
     "createdAt": "Time when it was created",
@@ -196,14 +203,14 @@ Outcome:
 }
 ```
 
-- **"GET /api/msg/chat/{ChatId}/message/{MessageId}"** - get message info  
-Outcome:  
+## **"GET /api/msg/chat/{ChatId}/message/{MessageId}"** - get message info  
+### Response body  
 ```json
-{ MessageOutcomeBody }  
+MessageResponseBody 
 ```
 
-- **"PUT /api/msg/chat/{ChatId}/message/{MessageId}"** - change message text  
-Income:  
+## **"PUT /api/msg/chat/{ChatId}/message/{MessageId}"** - change message text  
+### Request body:  
 ```json
 {   
     "message": "Message text P1",
@@ -213,13 +220,33 @@ Income:
 } 
 ```
 
-- **"DELETE /api/msg/chat/{ChatId}/message/{MessageId}"** - delete message from chat  
+## **"DELETE /api/msg/chat/{ChatId}/message/{MessageId}"** - delete message from chat  
 
-**WebSocket API:**  
--
+## **"GET /api/msg/reactions"** - get all supported reactions
+Response:
+```json
+[
+    "🔥", // Emojis
+    "💯",
+    ...
+]
+```
+
+## **"POST /api/msg/chat/{ChatId}/message/{MessageId}/reaction"** - post a reaction on message
+Request:
+```json
+{
+    "emoji": "emoji only from /api/msg/reactions"
+}
+```  
+
+## **"DELETE /api/msg/chat/{ChatId}/message/{MessageId}/reaction/{emoji}"** - del a reaction on message
+- {emoji} - real emoji, example: /reaction/🔥
+
+
+# **WebSocket API:**  
 **Endpoint works only with JWT token from Auth API**  
-
-- **"WS: /api/ws?token={YourAccessToken}"** - start websocket connection  
+## **"WS: /api/ws?token={YourAccessToken}"** - start websocket connection  
 By connecting to socket, you will recieve events:  
 ```json
 {  
@@ -228,7 +255,7 @@ By connecting to socket, you will recieve events:
 }  
 ```
 
-**Events:**  
+## **Events:**  
 - NewChatType:  
 ```json
 {  
@@ -279,10 +306,34 @@ By connecting to socket, you will recieve events:
     }  
 }  
 ```
+- NewReactionEvent:
+```json
+{
+    "type": "newReaction",
+    "payload": {
+        "chatId": "UUIDv4",
+        "msgId": "UUIDv7",
+        "userId": "UUIDv4",
+        "emoji": "🌈" // emoji from /reactions endpoint
+    }
+} 
+```
+- DelReactionEvent:
+```json
+{
+    "type": "delReaction",
+    "payload": {
+        "chatId": "UUIDv4",
+        "msgId": "UUIDv7",
+        "userId": "UUIDv4",
+        "emoji": "🌈" // emoji from /reactions endpoint
+    }
+} 
+```
 
-**Statuses:**  
+## **Statuses:**  
 - You can send your status via ws connection:  
-Income: (Example)  
+### Request body: (Example)  
 ```json
 {
     "req": 1,
@@ -291,7 +342,7 @@ Income: (Example)
     }
 }
 ```
-Outcome: (Example)  
+### Response body (Example)  
 ```json
 {  
     "type": "response",  
@@ -311,8 +362,8 @@ Outcome: (Example)
     - 400, "Bad Request"
     - 500, "Intrnal Error"
 
-- You can also make request to track someone statuses (primary use: 1v1 chat):  
-Income: (Example)  
+## You can also make request to track someone statuses (primary use: 1v1 chat):  
+### Request body: (Example)  
 ```json
 {
     "req": 2,
@@ -321,7 +372,7 @@ Income: (Example)
     }
 }
 ```
-Outcome: (Example)  
+### Response body (Example)  
 ```json
 {  
     "type": "response",  
@@ -337,9 +388,11 @@ Outcome: (Example)
 
 *When you connect via ws, you already get status Online, so don't send it. When you disconnect your profile automatically gain Offline status  
 
+
+
 # **Status API:**  
 ## - "GET /api/status/{ProfileUUID}" - get last known profile status  
-Outcome: (Example)
+### Response body (Example)
 ```json
 {
     "status": 1,

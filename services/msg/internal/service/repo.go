@@ -18,11 +18,14 @@ type MessageRepo interface {
 	GetChatsExtended(ctx context.Context, userId uuid.UUID) ([]ChatFullInfo, error)
 	GetChatInfo(ctx context.Context, chatId uuid.UUID) (*ChatInfo, error)
 	GetChatMembers(ctx context.Context, chatId uuid.UUID) ([]ChatMember, error)
-	GetChatMembersIdsExcept(ctx context.Context, chatId, exceptUserId uuid.UUID) ([]uuid.UUID, error)
 	GetChatHistory(ctx context.Context, chatId uuid.UUID, fromId uuid.UUID, q int) ([]Message, error)
 
 	NewMessage(ctx context.Context, chatId uuid.UUID, msg *Message) error
 	GetMessage(ctx context.Context, chatId, msgId uuid.UUID) (*Message, error)
 	RedactMessage(ctx context.Context, chatId, msgId uuid.UUID, msg *ToPostMessage) error
 	DelMessage(ctx context.Context, chatId, msgId, userId uuid.UUID) error
+
+	GetEmojis(ctx context.Context) ([]string, error)
+	NewReaction(ctx context.Context, userId, chatId, msgId uuid.UUID, emoji string) error
+	DelReaction(ctx context.Context, userId, chatId, msgId uuid.UUID, emoji string) error
 }

@@ -80,6 +80,13 @@ func FromServiceChatInfo(info *service.ChatInfo) *ChatInfoResponseBody {
 	}
 }
 
+func FromServiceReaction(reaction service.Reaction) ReactionResponseBody {
+	return ReactionResponseBody{
+		Emoji: reaction.Emoji,
+		Users: reaction.Users,
+	}
+}
+
 func FromServiceMessage(msg service.Message) MessageResponseBody {
 	return MessageResponseBody{
 		MessageId:   msg.MessageId,
@@ -92,6 +99,7 @@ func FromServiceMessage(msg service.Message) MessageResponseBody {
 		RedactedAt:  msg.RedactedAt,
 		DeletedAt:   msg.DeletedAt,
 		ReplyToId:   msg.ReplyToId,
+		Reactions:   MapSlice(msg.Reactions, FromServiceReaction),
 	}
 }
 

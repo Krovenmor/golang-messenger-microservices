@@ -10,9 +10,12 @@ import (
 	"github.com/google/uuid"
 )
 
-var chatIdKey = "chatid"
-var messageIdKey = "messageid"
-var targetKey = "target"
+var (
+	chatIdKey    = "chatid"
+	messageIdKey = "messageid"
+	targetKey    = "target"
+	emojiKey     = "emoji"
+)
 
 type Handler struct {
 	msg  service.MessageService
@@ -52,20 +55,36 @@ func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {
 		m.Handle(pattern, h.auth.Middleware(handlerFunc))
 	}
 
-	protected("POST /api/msg/profile", h.NewProfile)
-	protected("GET /api/msg/profile", h.GetProfilePrivate)
-	protected(fmt.Sprintf("GET /api/msg/profile/{%s}", targetKey), h.GetProfilePublic)
-	protected("GET /api/msg/profile/chats", h.GetProfileChats)
-	protected("GET /api/msg/profile/chats/full", h.GetProfileChatsExtended)
+	profilePath := " /api/msg/profile"
+	profileWithTargetPath := profilePath + fmt.Sprintf("/{%s}", targetKey)
 
-	protected("POST /api/msg/chat/new", h.NewChat)
-	protected(fmt.Sprintf("POST /api/msg/chat/{%s}", chatIdKey), h.PostMessage)
-	protected(fmt.Sprintf("GET /api/msg/chat/{%s}", chatIdKey), h.GetChatMessages)
-	protected(fmt.Sprintf("GET /api/msg/chat/{%s}/info", chatIdKey), h.GetChatInfo)
+	protected("POST"+profilePath, h.NewProfile)
+	protected("GET"+profilePath, h.GetProfilePrivate)
+	protected("GET"+profileWithTargetPath, h.GetProfilePublic)
+	protected("GET"+profilePath+"/chats", h.GetProfileChats)
+	protected("GET"+profilePath+"/chats/full", h.GetProfileChatsExtended)
 
-	protected(fmt.Sprintf("GET /api/msg/chat/{%s}/message/{%s}", chatIdKey, messageIdKey), h.GetMessage)
-	protected(fmt.Sprintf("PUT /api/msg/chat/{%s}/message/{%s}", chatIdKey, messageIdKey), h.ChangeMessage)
-	protected(fmt.Sprintf("DELETE /api/msg/chat/{%s}/message/{%s}", chatIdKey, messageIdKey), h.DeleteMessage)
+	chatPath := " /api/msg/chat"
+	chatWithIdPath := chatPath + fmt.Sprintf("/{%s}", chatIdKey)
+
+	protected("POST"+chatPath, h.NewChat)
+	protected("POST"+chatWithIdPath, h.PostMessage)
+	protected("GET"+chatWithIdPath, h.GetChatMessages)
+	protected("GET"+chatWithIdPath+"/info", h.GetChatInfo)
+
+	chatAndMessagePath := chatWithIdPath + fmt.Sprintf("/message/{%s}", messageIdKey)
+
+	protected("GET"+chatAndMessagePath, h.GetMessage)
+	protected("PUT"+chatAndMessagePath, h.ChangeMessage)
+	protected("DELETE"+chatAndMessagePath, h.DeleteMessage)
+
+	protected("GET /api/msg/reactions", h.GetSupportedReactions)
+
+	reactionPath := chatAndMessagePath + "/reaction"
+	reactionEmojiPath := reactionPath + fmt.Sprintf("/{%s}", emojiKey)
+
+	protected("POST"+reactionPath, h.PostReaction)
+	protected("DELETE"+reactionEmojiPath, h.DeleteReaction)
 
 	return m
 }

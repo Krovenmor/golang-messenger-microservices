@@ -197,12 +197,7 @@ func (h *Handler) GetChatMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetMessage(w http.ResponseWriter, r *http.Request) {
-	chatId, err := getChatUuidFromPath(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	msgId, err := getMsgUuidFromPath(r)
+	chatId, msgId, err := getChatIdAndMsgIdFromPath(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -222,12 +217,7 @@ func (h *Handler) GetMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ChangeMessage(w http.ResponseWriter, r *http.Request) {
-	chatId, err := getChatUuidFromPath(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	msgId, err := getMsgUuidFromPath(r)
+	chatId, msgId, err := getChatIdAndMsgIdFromPath(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -251,12 +241,7 @@ func (h *Handler) ChangeMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
-	chatId, err := getChatUuidFromPath(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	msgId, err := getMsgUuidFromPath(r)
+	chatId, msgId, err := getChatIdAndMsgIdFromPath(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -267,6 +252,64 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	err = h.msg.DelMessage(r.Context(), chatId, msgId, userId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) GetSupportedReactions(w http.ResponseWriter, r *http.Request) {
+	reactions, err := h.msg.GetSupportedReactions(r.Context())
+	if err != nil {
+		log.Printf("Trouble with GetSupportedReactions, err: %q", err)
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	utils.Send(w, &reactions)
+}
+
+func (h *Handler) PostReaction(w http.ResponseWriter, r *http.Request) {
+	chatId, msgId, err := getChatIdAndMsgIdFromPath(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	req, err := utils.Recv[PostReactionRequestBody](r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	userId, err := utils.GetUuidFromContext(r)
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	err = h.msg.PostReaction(r.Context(), userId, chatId, msgId, req.Emoji)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) DeleteReaction(w http.ResponseWriter, r *http.Request) {
+	chatId, msgId, err := getChatIdAndMsgIdFromPath(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	emoji, err := getEmojiFromPath(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	userId, err := utils.GetUuidFromContext(r)
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	err = h.msg.DelReaction(r.Context(), userId, chatId, msgId, emoji)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

@@ -122,3 +122,25 @@ func (m *MessageServiceImpl) GetChatHistory(ctx context.Context, chatId uuid.UUI
 	}
 	return m.repo.GetChatHistory(ctx, chatId, fromMsgId, q)
 }
+
+func (m *MessageServiceImpl) GetSupportedReactions(ctx context.Context) ([]string, error) {
+	return m.repo.GetEmojis(ctx)
+}
+
+func (m *MessageServiceImpl) PostReaction(ctx context.Context, userId, chatId, msgId uuid.UUID, emoji string) error {
+	err := m.repo.NewReaction(ctx, userId, chatId, msgId, emoji)
+	if err != nil {
+		return err
+	}
+	m.pub.PublishNewReaction(ctx, chatId, msgId, userId, emoji)
+	return nil
+}
+
+func (m *MessageServiceImpl) DelReaction(ctx context.Context, userId, chatId, msgId uuid.UUID, emoji string) error {
+	err := m.repo.DelReaction(ctx, userId, chatId, msgId, emoji)
+	if err != nil {
+		return err
+	}
+	m.pub.PublishDelReaction(ctx, chatId, msgId, userId, emoji)
+	return nil
+}

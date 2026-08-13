@@ -27,6 +27,12 @@ type Message struct {
 	RedactedAt  *time.Time
 	DeletedAt   *time.Time
 	ReplyToId   *uuid.UUID
+	Reactions   []Reaction
+}
+
+type Reaction struct {
+	Emoji string
+	Users []uuid.UUID
 }
 
 type Profile struct {

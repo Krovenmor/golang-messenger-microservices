@@ -27,6 +27,14 @@ func getMsgUuidFromPath(r *http.Request) (uuid.UUID, error) {
 	return utils.GetUuidFromPath(r, messageIdKey)
 }
 
+func getEmojiFromPath(r *http.Request) (string, error) {
+	emoji := r.PathValue(emojiKey)
+	if emoji == "" {
+		return "", fmt.Errorf("Not found")
+	}
+	return emoji, nil
+}
+
 func getQueryParam(vals url.Values, key string) (string, error) {
 	val := vals.Get(key)
 	if val == "" {
@@ -61,4 +69,16 @@ func getIntQueryParam(vals url.Values, key string) (int, error) {
 	}
 
 	return valConv, nil
+}
+
+func getChatIdAndMsgIdFromPath(r *http.Request) (uuid.UUID, uuid.UUID, error) {
+	chatId, err := getChatUuidFromPath(r)
+	if err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+	msgId, err := getMsgUuidFromPath(r)
+	if err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+	return chatId, msgId, nil
 }

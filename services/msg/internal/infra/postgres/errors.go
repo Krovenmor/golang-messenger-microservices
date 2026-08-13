@@ -12,8 +12,11 @@ var (
 	ErrNotFound            = errors.New("not found")
 	ErrChatNotFound        = errors.New("chat not found")
 	ErrUserNotFound        = errors.New("user not found")
+	ErrEmojiNotFound       = errors.New("emoji not found")
 	ErrChatNotFoundOrEmpty = errors.New("chat not found or empty")
 	ErrNotFoundOrForbidden = errors.New("forbidden or not found")
+	ErrForbidden           = errors.New("forbidden")
+	ErrInternal            = errors.New("internal")
 )
 
 func getErrorMsg(err error) error {
@@ -27,6 +30,8 @@ func getErrorMsg(err error) error {
 				return ErrUserNotFound
 			case "chatmembers_user_id_fkey":
 				return ErrUserNotFound
+			case "message_reactions_emoji_fkey":
+				return ErrEmojiNotFound
 			}
 		}
 		if pgErr.Code == "23505" {

@@ -26,15 +26,19 @@ type Queries struct {
 	UpdateMessage string
 	DeleteMessage string
 
-	NewChat                 string
-	GetChats                string
-	GetChatsExtended        string
-	GetChatHistory          string
-	GetChatInfo             string
-	GetChatMembers          string
-	GetChatMembersIdsExcept string
+	NewChat          string
+	GetChats         string
+	GetChatsExtended string
+	GetChatHistory   string
+	GetChatInfo      string
+	GetChatMembers   string
 
 	GetPrivateChatBetweenTwoPeoples string
+
+	GetEmojis    string
+	GetReactions string
+	NewReaction  string
+	DelReaction  string
 }
 
 func GetQueries() (*Queries, error) {
@@ -65,7 +69,11 @@ func GetQueries() (*Queries, error) {
 		GetMessage:                      get("get_message"),
 		UpdateMessage:                   get("update_message"),
 		DeleteMessage:                   get("delete_message"),
-		GetChatMembersIdsExcept:         get("get_chat_members_ids_except"),
+
+		GetEmojis:    get("get_emojis"),
+		GetReactions: get("get_reactions"),
+		NewReaction:  get("new_reaction"),
+		DelReaction:  get("delete_reaction"),
 	}
 
 	if err != nil {

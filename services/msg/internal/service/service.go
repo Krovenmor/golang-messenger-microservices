@@ -22,4 +22,8 @@ type MessageService interface {
 	GetChats(ctx context.Context, userId uuid.UUID) ([]uuid.UUID, error)
 	GetChatsExtended(ctx context.Context, userId uuid.UUID) ([]ChatFullInfo, error)
 	GetChatHistory(ctx context.Context, chatId uuid.UUID, fromUserId, fromMsgId uuid.UUID, q int) ([]Message, error)
+
+	GetSupportedReactions(ctx context.Context) ([]string, error)
+	PostReaction(ctx context.Context, userId, chatId, msgId uuid.UUID, emoji string) error
+	DelReaction(ctx context.Context, userId, chatId, msgId uuid.UUID, emoji string) error
 }

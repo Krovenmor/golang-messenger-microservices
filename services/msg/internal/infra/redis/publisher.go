@@ -42,6 +42,13 @@ func (p *publisher) PublishNewChat(ctx context.Context, chatId uuid.UUID, usersT
 	}
 }
 
+func (p *publisher) publishToChat(ctx context.Context, chatId uuid.UUID, event broker.Event) {
+	err := p.pub.PublishEvent(ctx, p.toChat(chatId), event)
+	if err != nil {
+		log.Printf("publishToChat: trouble with PublishEvent to chat:%v, event:%v, err: %v", chatId, event, err)
+	}
+}
+
 func (p *publisher) PublishNewMessage(ctx context.Context, chatId, msgId uuid.UUID) {
 	event := broker.Event{
 		Type: broker.NewMessageType,
@@ -50,10 +57,7 @@ func (p *publisher) PublishNewMessage(ctx context.Context, chatId, msgId uuid.UU
 			MsgId:  msgId.String(),
 		},
 	}
-	err := p.pub.PublishEvent(ctx, p.toChat(chatId), event)
-	if err != nil {
-		log.Printf("PublishNewMessage: trouble with PublishEvent, err: %q", err)
-	}
+	p.publishToChat(ctx, chatId, event)
 }
 
 func (p *publisher) PublishMessageWasRedacted(ctx context.Context, chatId, msgId uuid.UUID) {
@@ -64,10 +68,7 @@ func (p *publisher) PublishMessageWasRedacted(ctx context.Context, chatId, msgId
 			MsgId:  msgId.String(),
 		},
 	}
-	err := p.pub.PublishEvent(ctx, p.toChat(chatId), event)
-	if err != nil {
-		log.Printf("PublishMessageWasRedacted: trouble with PublishEvent, err: %q", err)
-	}
+	p.publishToChat(ctx, chatId, event)
 }
 
 func (p *publisher) PublishMessageWasDeleted(ctx context.Context, chatId, msgId uuid.UUID) {
@@ -78,8 +79,31 @@ func (p *publisher) PublishMessageWasDeleted(ctx context.Context, chatId, msgId 
 			MsgId:  msgId.String(),
 		},
 	}
-	err := p.pub.PublishEvent(ctx, p.toChat(chatId), event)
-	if err != nil {
-		log.Printf("PublishMessageWasRedacted: trouble with PublishEvent, err: %q", err)
+	p.publishToChat(ctx, chatId, event)
+}
+
+func (p *publisher) PublishNewReaction(ctx context.Context, chatId, msgId, userId uuid.UUID, emoji string) {
+	event := broker.Event{
+		Type: broker.NewReactionType,
+		Payload: broker.NewReactionPayload{
+			ChatId: chatId.String(),
+			MsgId:  msgId.String(),
+			UserId: userId.String(),
+			Emoji:  emoji,
+		},
 	}
+	p.publishToChat(ctx, chatId, event)
+}
+
+func (p *publisher) PublishDelReaction(ctx context.Context, chatId, msgId, userId uuid.UUID, emoji string) {
+	event := broker.Event{
+		Type: broker.DelReactionType,
+		Payload: broker.DelReactionPayload{
+			ChatId: chatId.String(),
+			MsgId:  msgId.String(),
+			UserId: userId.String(),
+			Emoji:  emoji,
+		},
+	}
+	p.publishToChat(ctx, chatId, event)
 }

@@ -69,12 +69,26 @@ func (r *PostagreRepo) NewMessage(ctx context.Context, chatId uuid.UUID, msg *se
 	return nil
 }
 
-func (r *PostagreRepo) GetMessage(ctx context.Context, chatId, msgId uuid.UUID) (*service.Message, error) {
-	msg, err := repo.GetQueryByPos[service.Message](ctx, r.pool, r.q.GetMessage, chatId, msgId)
+func (r *PostagreRepo) getReactions(ctx context.Context, msgIds []uuid.UUID) ([]Reaction, error) {
+	reactions, err := repo.GetSliceQueryByPos[Reaction](ctx, r.pool, r.q.GetReactions, msgIds)
 	if err != nil {
 		return nil, getErrorMsg(err)
 	}
-	return msg, nil
+	return reactions, nil
+}
+
+func (r *PostagreRepo) GetMessage(ctx context.Context, chatId, msgId uuid.UUID) (*service.Message, error) {
+	msg, err := repo.GetQueryByPos[Message](ctx, r.pool, r.q.GetMessage, chatId, msgId)
+	if err != nil {
+		return nil, getErrorMsg(err)
+	}
+	reactions, err := r.getReactions(ctx, []uuid.UUID{msg.MessageId})
+	if err != nil {
+		return nil, getErrorMsg(err)
+	}
+	sReactions := ToServiceReactions(reactions)
+	sMessage := ToServiceMessage(msg, sReactions)
+	return &sMessage, nil
 }
 
 func (r *PostagreRepo) RedactMessage(ctx context.Context, chatId, msgId uuid.UUID, msg *service.ToPostMessage) error {
@@ -138,18 +152,6 @@ func (r *PostagreRepo) GetChatMembers(ctx context.Context, chatId uuid.UUID) ([]
 	return members, nil
 }
 
-func (r *PostagreRepo) GetChatMembersIdsExcept(ctx context.Context, chatId, exceptUserId uuid.UUID) ([]uuid.UUID, error) {
-	collect := func(row pgx.CollectableRow) (uuid.UUID, error) {
-		var id uuid.UUID
-		return id, row.Scan(&id)
-	}
-	ids, err := repo.GetSliceQueryByFunc(ctx, r.pool, r.q.GetChatMembersIdsExcept, collect, chatId, exceptUserId)
-	if err != nil {
-		return ids, getErrorMsg(err)
-	}
-	return ids, nil
-}
-
 func (r *PostagreRepo) GetChatInfo(ctx context.Context, chatId uuid.UUID) (*service.ChatInfo, error) {
 	var info service.ChatInfo
 	err := r.pool.QueryRow(ctx, r.q.GetChatInfo, chatId).Scan(
@@ -162,11 +164,67 @@ func (r *PostagreRepo) GetChatInfo(ctx context.Context, chatId uuid.UUID) (*serv
 }
 
 func (r *PostagreRepo) GetChatHistory(ctx context.Context, chatId uuid.UUID, fromId uuid.UUID, q int) ([]service.Message, error) {
-	messages, err := repo.GetSliceQueryByPos[service.Message](ctx, r.pool, r.q.GetChatHistory, chatId, fromId, q)
+	messages, err := repo.GetSliceQueryByPos[Message](ctx, r.pool, r.q.GetChatHistory, chatId, fromId, q)
 	if err != nil {
-		return messages, getErrorMsg(err)
+		return nil, getErrorMsg(err)
 	}
-	return messages, nil
+
+	sMessages := make([]service.Message, len(messages))
+	ids := make([]uuid.UUID, len(messages))
+	for i := range messages {
+		ids[i] = messages[i].MessageId
+		sMessages[i] = ToServiceMessage(&messages[i], []service.Reaction{})
+	}
+
+	reactions, err := r.getReactions(ctx, ids)
+	if err != nil {
+		return nil, getErrorMsg(err)
+	}
+	if len(reactions) == 0 {
+		return sMessages, nil
+	}
+
+	reactionIdx := 0
+	numReactions := len(reactions)
+
+	for i := range sMessages {
+		for reactionIdx < numReactions && reactions[reactionIdx].MessageId == sMessages[i].MessageId {
+			sMessages[i].Reactions = append(sMessages[i].Reactions, ToServiceReaction(reactions[reactionIdx]))
+			reactionIdx++
+		}
+	}
+
+	return sMessages, nil
+}
+
+func (r *PostagreRepo) GetEmojis(ctx context.Context) ([]string, error) {
+	sl, err := repo.GetSliceQueryByType[string](ctx, r.pool, r.q.GetEmojis)
+	if err != nil {
+		return nil, getErrorMsg(err)
+	}
+	return sl, nil
+}
+
+func (r *PostagreRepo) NewReaction(ctx context.Context, userId, chatId, msgId uuid.UUID, emoji string) error {
+	t, err := r.pool.Exec(ctx, r.q.NewReaction, msgId, userId, emoji, chatId)
+	if err != nil {
+		return getErrorMsg(err)
+	}
+	if t.RowsAffected() == 0 {
+		return ErrForbidden
+	}
+	return nil
+}
+
+func (r *PostagreRepo) DelReaction(ctx context.Context, userId, chatId, msgId uuid.UUID, emoji string) error {
+	t, err := r.pool.Exec(ctx, r.q.DelReaction, msgId, userId, emoji, chatId)
+	if err != nil {
+		return getErrorMsg(err)
+	}
+	if t.RowsAffected() == 0 {
+		return ErrForbidden
+	}
+	return nil
 }
 
 func (r *PostagreRepo) IsProfileInChat(ctx context.Context, userId, chatId uuid.UUID) error {
