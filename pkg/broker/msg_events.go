@@ -1,7 +1,5 @@
 package broker
 
-type EventType string
-
 const (
 	NewChatType         EventType = "newChat"
 	NewMessageType      EventType = "newMessage"
@@ -11,11 +9,6 @@ const (
 	NewReactionType EventType = "newReaction"
 	DelReactionType EventType = "delReaction"
 )
-
-type Event struct {
-	Type    EventType `json:"type"`
-	Payload any       `json:"payload"`
-}
 
 type NewChatPayload struct {
 	ChatId string `json:"chatId"`
