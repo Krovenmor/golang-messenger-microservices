@@ -7,11 +7,14 @@ type RedisConfig struct {
 }
 
 type RedisChannelsConfig struct {
-	UserStatusPattern     string
-	UserEventsPattern     string
-	UserBanRequestChannel string
-	UserBanEventChannel   string
-	ChatEventsPattern     string
+	UserStatusPattern string
+	UserEventsPattern string
+
+	UserBanRequestChannel   string
+	UserBanEventChannel     string
+	UserVerificationChannel string
+
+	ChatEventsPattern string
 }
 
 func GetRedisConfig() (*RedisConfig, error) {
@@ -34,11 +37,14 @@ func GetRedisChannelsConfig() (*RedisChannelsConfig, error) {
 	r := NewConfigReader()
 
 	conf := RedisChannelsConfig{
-		UserStatusPattern:     r.GetString("REDIS_USER_STATUS_PATTERN"),
-		UserEventsPattern:     r.GetString("REDIS_USER_EVENTS_PATTERN"),
-		UserBanRequestChannel: r.GetString("REDIS_USER_BAN_REQUEST_CHANNEL"),
-		UserBanEventChannel:   r.GetString("REDIS_USER_BAN_EVENT_CHANNEL"),
-		ChatEventsPattern:     r.GetString("REDIS_CHAT_EVENTS_PATTERN"),
+		UserStatusPattern: r.GetString("REDIS_USER_STATUS_PATTERN"),
+		UserEventsPattern: r.GetString("REDIS_USER_EVENTS_PATTERN"),
+
+		UserBanRequestChannel:   r.GetString("REDIS_USER_BAN_REQUEST_CHANNEL"),
+		UserBanEventChannel:     r.GetString("REDIS_USER_BAN_EVENT_CHANNEL"),
+		UserVerificationChannel: r.GetString("REDIS_USER_VERIFICATION_CHANNEL"),
+
+		ChatEventsPattern: r.GetString("REDIS_CHAT_EVENTS_PATTERN"),
 	}
 
 	if r.err != nil {
