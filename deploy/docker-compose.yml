@@ -113,6 +113,18 @@ services:
         condition: service_healthy
     volumes:
       - ../certs/jwt/public.key:/app/certs/jwt/public.key:ro
+  
+  email-service:
+    build: 
+      context: ..
+      dockerfile: services/email/Dockerfile
+    env_file:
+      - ../config/common.env
+      - ../config/redis_channels.env
+      - ../config/email.env
+    depends_on:
+      redis-db:
+        condition: service_healthy
 
   #
   # Web and GateWay
