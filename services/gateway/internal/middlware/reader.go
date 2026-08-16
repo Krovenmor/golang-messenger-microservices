@@ -18,7 +18,7 @@ func registerReader(lf fx.Lifecycle, sub Subscriber, pub Publisher, channel stri
 		}
 		reason := FromBroker(event.Payload.Reason)
 		ttl := calcTime(reason)
-		err := repo.Put(ctx, event.Payload.UserId.String(), ttl)
+		err := repo.PutKey(ctx, event.Payload.UserId.String(), ttl)
 		if err != nil {
 			log.Printf("reader: trouble with saving ban: %v, err: %q", event, err)
 			return

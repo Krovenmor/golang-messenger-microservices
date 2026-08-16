@@ -101,7 +101,7 @@ func (m *Middleware) LimitMiddleware(h http.Handler) http.Handler {
 		}
 
 		if !limiter.Allow() {
-			err := m.repoBansAddr.Put(ctx, addr, m.getBanTtl(TooManyRequestsIp))
+			err := m.repoBansAddr.PutKey(ctx, addr, m.getBanTtl(TooManyRequestsIp))
 			if err != nil {
 				log.Printf("LimitMiddleware: trouble with saving ban for addr: %q, err: %q", addr, err)
 			} else {

@@ -18,7 +18,7 @@ func (m *Middleware) checkForBanId(ctx context.Context, claims *jwt.TokenClaims)
 	if err != nil {
 		return -1, ErrInternal
 	}
-	ttl, isExists := m.repoBansId.Get(ctx, id.String())
+	ttl, isExists := m.repoBansId.GetTtl(ctx, id.String())
 	if !isExists {
 		return -1, nil
 	}
@@ -79,7 +79,7 @@ func (m *Middleware) checkToken(ctx context.Context, token string) error {
 	banTtl, err := m.checkForBanId(ctx, claims)
 	if err != nil {
 		hashed := utils.Hash(token)
-		err := m.repoTokens.Put(ctx, hashed, banTtl)
+		err := m.repoTokens.PutKey(ctx, hashed, banTtl)
 		if err != nil {
 			log.Printf("checkToken: trouble with saving token, token: %q, err: %q", hashed, err)
 		} else {
