@@ -10,6 +10,8 @@ type AuthConfig struct {
 
 	AccessTokenTTL  time.Duration
 	RefreshTokenTTL time.Duration
+
+	VerificationCodeTTL time.Duration
 }
 
 type HashConfig struct {
@@ -20,9 +22,11 @@ type HashConfig struct {
 	KeyLength   int
 }
 
-type BanConfig struct {
+type RedisConfig struct {
 	RepoLoginPrefix string
 	RepoTokenPrefix string
+
+	CacheTTLPrefix string
 }
 
 func GetAuthConfig() (*AuthConfig, error) {
@@ -32,6 +36,8 @@ func GetAuthConfig() (*AuthConfig, error) {
 		AccessTokenTTL:  r.GetDuration("JWT_ACCESS_TTL"),
 		RefreshTokenTTL: r.GetDuration("JWT_REFRESH_TTL"),
 		PrvKey:          r.GetBytes("JWT_PRVKEY_PATH"),
+
+		VerificationCodeTTL: r.GetDuration("VERIFICATION_CODES_TTL"),
 	}
 
 	return &conf, r.Err()
@@ -51,12 +57,14 @@ func GetHashConfig() (*HashConfig, error) {
 	return &conf, r.Err()
 }
 
-func GetBanConfig() (*BanConfig, error) {
+func GetRedisConfig() (*RedisConfig, error) {
 	r := config.NewConfigReader()
 
-	conf := BanConfig{
+	conf := RedisConfig{
 		RepoLoginPrefix: r.GetString("BAN_REPO_LOGIN_PREFIX"),
 		RepoTokenPrefix: r.GetString("BAN_REPO_TOKEN_PREFIX"),
+
+		CacheTTLPrefix: r.GetString("CACHE_TTL_PREFIX"),
 	}
 
 	return &conf, r.Err()

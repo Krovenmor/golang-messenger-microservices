@@ -24,10 +24,8 @@ type BanChecker struct {
 	auth service.AuthService
 }
 
-// {"type": "ban_ev", "payload": {"userId": "98d199b7-0513-4418-8acd-ccb3d4d67575", "ttl": 100000000000}}
-
 func NewBanChecker(lf fx.Lifecycle, repoFab func(prefix string) MiddlewareRepo, sub Subscriber, auth service.AuthService,
-	banConf *config.BanConfig, redisConf *stdconf.RedisChannelsConfig) *BanChecker {
+	banConf *config.RedisConfig, redisConf *stdconf.RedisChannelsConfig) *BanChecker {
 	checker := &BanChecker{
 		repoLogins: repoFab(banConf.RepoLoginPrefix),
 		repoTokens: repoFab(banConf.RepoTokenPrefix),
@@ -48,12 +46,12 @@ func (c *BanChecker) CheckTokenBanned(ctx context.Context, rToken string) bool {
 }
 
 func (c *BanChecker) banUser(ctx context.Context, userId uuid.UUID, ttl time.Duration) {
-	info, err := c.auth.GetInfo(ctx, userId)
+	info, err := c.auth.GetUserTokens(ctx, userId)
 	if err != nil {
 		log.Printf("banUser: trouble with GetInfo(%q), err: %q", userId, err)
 		return
 	}
-	err = c.repoLogins.Put(ctx, info.Login, ttl)
+	err = c.repoLogins.PutKey(ctx, info.Login, ttl)
 	if err != nil {
 		log.Printf("banUser: Trouble with repoLogins.Put(ctx, %v, %d)", userId, ttl)
 	}

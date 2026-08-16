@@ -6,9 +6,8 @@ import (
 )
 
 type MiddlewareRepo interface {
-	Put(ctx context.Context, key string, ttl time.Duration) error
+	PutKey(ctx context.Context, key string, ttl time.Duration) error
 	PutKeys(ctx context.Context, key []string, ttl time.Duration) error
-	Get(ctx context.Context, key string) (time.Duration, bool)
 	IsExists(ctx context.Context, key string) bool
 }
 

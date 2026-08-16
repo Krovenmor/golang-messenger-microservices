@@ -4,8 +4,11 @@ import (
 	j "MyMessenger/pkg/jwt"
 	"MyMessenger/pkg/utils"
 	"MyMessenger/services/auth/internal/config"
+	"MyMessenger/services/auth/internal/infra/security/code"
 	"context"
+	"errors"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,20 +21,36 @@ type JwtAuth struct {
 	jwtChecker TokenChecker
 	gen        TokenGenerator
 	hash       AuthHasher
+
+	cache AuthTTLCache
+	pub   Publisher
 }
 
-func NewJwtAuth(repo AuthRepo, checker TokenChecker, gen TokenGenerator, hash AuthHasher, conf *config.AuthConfig) *JwtAuth {
+func NewJwtAuth(repo AuthRepo, cache AuthTTLCache, pub Publisher, checker TokenChecker, gen TokenGenerator, hash AuthHasher, conf *config.AuthConfig) *JwtAuth {
 	return &JwtAuth{
 		repo:       repo,
 		conf:       conf,
 		jwtChecker: checker,
 		gen:        gen,
 		hash:       hash,
+
+		cache: cache,
+		pub:   pub,
 	}
 }
 
-func (a *JwtAuth) Register(ctx context.Context, login, password string) error {
-	err := a.repo.IsUserExists(ctx, login)
+func (a *JwtAuth) Register(ctx context.Context, login, password, email, code string) error {
+	login, email = strings.ToLower(login), strings.ToLower(email)
+	rCode, err := a.cache.Get(ctx, email)
+	if err != nil {
+		log.Printf("Register: Get, err: %q", err)
+		return ErrBadData
+	}
+	if rCode != code {
+		log.Printf("Register: Codes not equal: %v != %v", rCode, code)
+		return ErrBadData
+	}
+	err = a.repo.IsUserExists(ctx, login)
 	if err == nil {
 		log.Printf("Register: user already exists: %q", login)
 		return ErrBadData
@@ -42,10 +61,14 @@ func (a *JwtAuth) Register(ctx context.Context, login, password string) error {
 		return ErrInternal
 	}
 	userId := uuid.New()
-	err = a.repo.AddNewUser(ctx, userId, login, hashed)
+	err = a.repo.AddNewUser(ctx, userId, login, hashed, email)
 	if err != nil {
 		log.Printf("Register: trouble with adding new user after repo.IsExists, login:%q, err:%q", login, err)
 		return ErrBadData
+	}
+	err = a.cache.Del(ctx, email)
+	if err != nil {
+		log.Printf("Register: trouble with deleting email, login:%q, email:%q, err:%q", login, email, err)
 	}
 	return nil
 }
@@ -70,6 +93,7 @@ func (a *JwtAuth) newTokens(ctx context.Context, userId uuid.UUID) (*Tokens, err
 }
 
 func (a *JwtAuth) LogIn(ctx context.Context, login, password string) (*Tokens, error) {
+	login = strings.ToLower(login)
 	userId, hashed, err := a.repo.GetUser(ctx, login)
 	if err != nil {
 		return nil, ErrBadData
@@ -113,6 +137,40 @@ func (a *JwtAuth) UpdateTokens(ctx context.Context, rToken string) (*Tokens, err
 	return nTokens, nil
 }
 
-func (a *JwtAuth) GetInfo(ctx context.Context, userId uuid.UUID) (*UserInfo, error) {
+func (a *JwtAuth) GetUserInfo(ctx context.Context, userId uuid.UUID) (*UserInfo, error) {
 	return a.repo.GetUserInfo(ctx, userId)
+}
+
+func (a *JwtAuth) GetUserTokens(ctx context.Context, userId uuid.UUID) (*UserTokens, error) {
+	return a.repo.GetUserTokens(ctx, userId)
+}
+
+func (a *JwtAuth) SendCodeEmail(ctx context.Context, email string) (int, int, error) {
+	email = strings.ToLower(email)
+	_, err := a.cache.Get(ctx, email)
+	if err == nil {
+		log.Printf("SendCodeEmail: Already send code to %q", email)
+		return -1, -1, ErrBadData
+	}
+	vCode, err := code.GenerateNewCode()
+	if err != nil {
+		log.Printf("SendCodeEmail: Trouble with GenerateNewCode, err: %q", err)
+		return -1, -1, ErrInternal
+	}
+	err = a.pub.PublishEmailVerification(ctx, email, vCode)
+	if err != nil {
+		log.Printf("SendCodeEmail: Trouble with PublishEmailVerification, err: %q", err)
+		return -1, -1, ErrInternal
+	}
+	ttl := a.conf.VerificationCodeTTL
+	err = a.cache.Put(ctx, email, vCode, ttl)
+	if err != nil {
+		if errors.Is(err, ErrAlreadyExists) {
+			return -1, -1, ErrBadData
+		}
+		log.Printf("SendCodeEmail: Trouble with Put, err: %q", err)
+		return -1, -1, ErrInternal
+	}
+	seconds := int(ttl.Seconds())
+	return seconds, seconds, nil
 }

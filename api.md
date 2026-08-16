@@ -1,12 +1,30 @@
 # **Auth API:**  
+## **"POST /api/auth/send-code"** - send code to user email (needs for register)
+### Request body:
+```json
+{
+    "email": "user@email.com"
+}  
+```
+### Response body:
+```json
+{
+    "expiresIn": 300,   // In seconds
+	"retryAfter": 60    // In seconds
+}  
+```
+
 ## **"POST /api/auth/register"** - register a new user  
 ### Request body:
 ```json
 {
     "login": "YourLogin",
-    "password": "YourPassword"
+    "password": "YourPassword",
+    "email": "user@email.com",
+    "code": "verification code from /send-code"
 }  
 ```
+- On success code: 201
 
 ## **"POST /api/auth/login"** - LogIn, get JWT tokens  
 ### Request body:
@@ -38,6 +56,17 @@
     "refreshToken": "YourNewRefreshToken"
 }  
 ```
+
+## **"GET /api/auth/account"** - Get info about your account 
+- You must provide access token in Authorization
+### Response body:
+```json
+{
+    "login": "YourLogin",
+    "email": "user@email.com"
+}
+```
+
 
 # **Message API:**
 **All endpoints works only with JWT token from Auth API**  

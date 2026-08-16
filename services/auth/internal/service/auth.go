@@ -11,14 +11,23 @@ type Tokens struct {
 	RefreshToken string
 }
 
-type UserInfo struct {
+type UserTokens struct {
 	Login   string
 	RTokens []string
 }
 
+type UserInfo struct {
+	Login string
+	Email string
+}
+
 type AuthService interface {
-	Register(ctx context.Context, login, password string) error
+	SendCodeEmail(ctx context.Context, email string) (int, int, error)
+
+	Register(ctx context.Context, login, password, email, code string) error
 	LogIn(ctx context.Context, login, password string) (*Tokens, error)
+	GetUserInfo(ctx context.Context, userId uuid.UUID) (*UserInfo, error)
+
 	UpdateTokens(ctx context.Context, rToken string) (*Tokens, error)
-	GetInfo(ctx context.Context, userId uuid.UUID) (*UserInfo, error)
+	GetUserTokens(ctx context.Context, userId uuid.UUID) (*UserTokens, error)
 }

@@ -30,8 +30,8 @@ func NewRepo(pool *pgxpool.Pool) (*PostagreRepo, error) {
 	}, nil
 }
 
-func (p *PostagreRepo) AddNewUser(ctx context.Context, userId uuid.UUID, login, password string) error {
-	c, err := p.pool.Exec(ctx, p.q.AddUser, userId, login, password)
+func (p *PostagreRepo) AddNewUser(ctx context.Context, userId uuid.UUID, login, password, email string) error {
+	c, err := p.pool.Exec(ctx, p.q.AddUser, userId, login, password, email)
 	if err != nil {
 		return betterError(err)
 	}
@@ -51,9 +51,18 @@ func (p *PostagreRepo) GetUser(ctx context.Context, login string) (uuid.UUID, st
 	return userId, password, nil
 }
 
+func (p *PostagreRepo) GetUserTokens(ctx context.Context, userId uuid.UUID) (*service.UserTokens, error) {
+	var info service.UserTokens
+	err := p.pool.QueryRow(ctx, p.q.GetUserTokens, userId).Scan(&info.Login, &info.RTokens)
+	if err != nil {
+		return nil, betterError(err)
+	}
+	return &info, nil
+}
+
 func (p *PostagreRepo) GetUserInfo(ctx context.Context, userId uuid.UUID) (*service.UserInfo, error) {
 	var info service.UserInfo
-	err := p.pool.QueryRow(ctx, p.q.GetUserInfo, userId).Scan(&info.Login, &info.RTokens)
+	err := p.pool.QueryRow(ctx, p.q.GetUserInfo, userId).Scan(&info.Login, &info.Email)
 	if err != nil {
 		return nil, betterError(err)
 	}

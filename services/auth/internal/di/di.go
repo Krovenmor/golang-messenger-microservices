@@ -10,6 +10,8 @@ import (
 	"MyMessenger/services/auth/internal/config"
 	"MyMessenger/services/auth/internal/infra/postgres"
 	"MyMessenger/services/auth/internal/infra/postgres/migrations"
+	"MyMessenger/services/auth/internal/infra/redis/cache"
+	"MyMessenger/services/auth/internal/infra/redis/pub"
 	"MyMessenger/services/auth/internal/infra/security/argon2id"
 	"MyMessenger/services/auth/internal/infra/security/ban"
 	"MyMessenger/services/auth/internal/infra/security/jwt"
@@ -29,10 +31,13 @@ func provideChecker(j *stdjwt.JWTChecker) service.TokenChecker {
 	return service.TokenChecker(j)
 }
 
-func provideRepoFabric(rd *redis.Client) func(prefix string) ban.MiddlewareRepo {
-	rf := rr.NewRedisRepoFactory(rd, appPrefix)
+func provideRedisRepoFactory(rd *redis.Client) *rr.RedisFactory {
+	return rr.NewRedisRepoFactory(rd, appPrefix)
+}
+
+func provideRepoFabricFunc(f *rr.RedisFactory) func(prefix string) ban.MiddlewareRepo {
 	return func(prefix string) ban.MiddlewareRepo {
-		return rf.NewRedisRepo(prefix)
+		return f.NewRedisRepo(prefix)
 	}
 }
 
@@ -46,7 +51,7 @@ func GetModule() fx.Option {
 		fx.Provide(
 			config.GetAuthConfig,
 			config.GetHashConfig,
-			config.GetBanConfig,
+			config.GetRedisConfig,
 			stdconfig.GetRepoConfig,
 			stdconfig.GetServConfig,
 			stdconfig.GetRedisChannelsConfig,
@@ -64,6 +69,11 @@ func GetModule() fx.Option {
 		// Postgres migrations
 		fx.Invoke(
 			migrations.MakeMigrations,
+		),
+
+		// Redis repo factory
+		fx.Provide(
+			provideRedisRepoFactory,
 		),
 
 		// Auth Service
@@ -85,6 +95,17 @@ func GetModule() fx.Option {
 				argon2id.NewArgon2idHasher,
 				fx.As(new(service.AuthHasher)),
 			),
+			// TTLCache
+			fx.Annotate(
+				cache.NewRedisTtlCache,
+				fx.As(new(service.AuthTTLCache)),
+			),
+			// Publisher
+			redispkg.NewRedisPublisher,
+			fx.Annotate(
+				pub.NewPublisher,
+				fx.As(new(service.Publisher)),
+			),
 			// Service
 			fx.Annotate(
 				service.NewJwtAuth,
@@ -94,7 +115,7 @@ func GetModule() fx.Option {
 
 		// BanChecker
 		fx.Provide(
-			provideRepoFabric,
+			provideRepoFabricFunc,
 			fx.Annotate(
 				redispkg.NewRedisSubscriber,
 				fx.As(new(ban.Subscriber)),
@@ -107,6 +128,11 @@ func GetModule() fx.Option {
 
 		// Handler
 		fx.Provide(
+			// For Middleware
+			fx.Annotate(
+				stdjwt.NewAuthenticator,
+				fx.As(new(web.Authenticator)),
+			),
 			http.NewServeMux,
 			web.NewHandler,
 			(*web.Handler).RegisterRoutes,

@@ -1,2 +1,2 @@
-insert into users (user_id, login, password)
-values ($1, $2, $3);
+insert into users (user_id, login, password, email)
+values ($1, $2, $3, $4);
