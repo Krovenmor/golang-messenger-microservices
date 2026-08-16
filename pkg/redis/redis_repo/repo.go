@@ -88,6 +88,10 @@ func (r *RedisRepo) GetVal(ctx context.Context, key string) (string, error) {
 	return val, nil
 }
 
+func (r *RedisRepo) DelKey(ctx context.Context, key string) error {
+	return r.rd.Del(ctx, key).Err()
+}
+
 func (r *RedisRepo) IsExists(ctx context.Context, key string) bool {
 	count, err := r.rd.Exists(ctx, r.toKey(key)).Result()
 	return err == nil && count > 0
