@@ -1,7 +1,8 @@
 package config
 
 type JwtCheckerConf struct {
-	PubKey []byte
+	PubKey    []byte
+	ATokenLen int
 }
 
 func GetJwtCheckerConf() (JwtCheckerConf, error) {
@@ -9,7 +10,12 @@ func GetJwtCheckerConf() (JwtCheckerConf, error) {
 	if err != nil {
 		return JwtCheckerConf{}, err
 	}
+	aTokenL, err := GetEnvVarInt("JWT_ACCESS_TOKEN_LEN")
+	if err != nil {
+		return JwtCheckerConf{}, err
+	}
 	return JwtCheckerConf{
-		PubKey: pubKey,
+		PubKey:    pubKey,
+		ATokenLen: aTokenL,
 	}, nil
 }

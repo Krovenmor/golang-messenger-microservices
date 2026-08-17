@@ -110,6 +110,7 @@ func (a *JwtAuth) LogIn(ctx context.Context, login, password string) (*Tokens, e
 func (a *JwtAuth) UpdateTokens(ctx context.Context, rToken string) (*Tokens, error) {
 	claims, err := a.jwtChecker.IsValidToken(rToken)
 	if err != nil {
+		log.Printf("UpdateTokens: Not valid refresh token, err: %q", err)
 		return nil, ErrBadData
 	}
 	userId, err := uuid.Parse(claims.Subject)
@@ -124,10 +125,12 @@ func (a *JwtAuth) UpdateTokens(ctx context.Context, rToken string) (*Tokens, err
 		return nil, ErrBadData
 	}
 	if time.Now().UTC().After(claims.ExpiresAt.Time) {
+		log.Printf("UpdateTokens: Expired refresh token, err: %q", err)
 		return nil, ErrBadData
 	}
 	nTokens, err := a.newTokens(ctx, userId)
 	if err != nil {
+		log.Printf("UpdateTokens: Trouble with newTokens, err: %q", err)
 		return nil, err
 	}
 	err = a.repo.DeleteRefresh(ctx, userId, hashedRToken)

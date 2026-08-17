@@ -3,7 +3,6 @@ package jwt
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -63,8 +62,8 @@ func (a *Authenticator) Middleware(h http.Handler) http.Handler {
 
 		claims, err := a.checker.IsValidAccess(token)
 		if err != nil {
-			log.Printf("False token")
-			http.Error(w, fmt.Sprintf("Trouble with token, err: %q", err), http.StatusUnauthorized)
+			log.Printf("Not valid token, err: %q", err)
+			http.Error(w, "Bad token", http.StatusUnauthorized)
 			return
 		}
 

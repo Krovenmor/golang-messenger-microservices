@@ -3,7 +3,8 @@ package jwt
 import (
 	j "MyMessenger/pkg/jwt"
 	"MyMessenger/services/auth/internal/config"
-	"crypto/rsa"
+	"crypto/ed25519"
+	"fmt"
 	"log"
 	"time"
 
@@ -12,16 +13,20 @@ import (
 )
 
 type jwtGenerator struct {
-	prvKey *rsa.PrivateKey
+	prvKey ed25519.PrivateKey
 }
 
 func GetNewJwtGenerator(conf *config.AuthConfig) (*jwtGenerator, error) {
-	prvKey, err := jwt.ParseRSAPrivateKeyFromPEM(conf.PrvKey)
+	prvKey, err := jwt.ParseEdPrivateKeyFromPEM(conf.PrvKey)
 	if err != nil {
-		log.Fatalf("GetNewJwtGenerator(): Trouble with parsing prvKey: %q", err.Error())
+		log.Printf("GetNewJwtGenerator(): Trouble with parsing prvKey: %q", err.Error())
 		return nil, err
 	}
-	return &jwtGenerator{prvKey: prvKey}, nil
+	edKey, ok := prvKey.(ed25519.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("GetNewJwtGenerator: key is not of type ed25519.PrivateKey")
+	}
+	return &jwtGenerator{prvKey: edKey}, nil
 }
 
 func (g *jwtGenerator) GenToken(userId uuid.UUID, tTl time.Duration, tType j.TokenType) (string, error) {
@@ -34,6 +39,6 @@ func (g *jwtGenerator) GenToken(userId uuid.UUID, tTl time.Duration, tType j.Tok
 			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 		},
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, &claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &claims)
 	return token.SignedString(g.prvKey)
 }

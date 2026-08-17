@@ -2,7 +2,7 @@ package jwt
 
 import (
 	"MyMessenger/pkg/config"
-	"crypto/rsa"
+	"crypto/ed25519"
 	"fmt"
 	"log"
 
@@ -23,26 +23,28 @@ type TokenClaims struct {
 }
 
 type JWTChecker struct {
-	pubKey *rsa.PublicKey
+	pubKey    ed25519.PublicKey
+	aTokenLen int
 }
 
-func NewJwtCheckerKey(pubKey *rsa.PublicKey) *JWTChecker {
-	return &JWTChecker{pubKey: pubKey}
-}
-
-func NewJwtCheckerConf(conf config.JwtCheckerConf) *JWTChecker {
-	pubKey, err := jwt.ParseRSAPublicKeyFromPEM(conf.PubKey)
+func NewJwtCheckerConf(conf config.JwtCheckerConf) (*JWTChecker, error) {
+	pubKey, err := jwt.ParseEdPublicKeyFromPEM(conf.PubKey)
 	if err != nil {
-		log.Fatalf("NewJwtCheckerConf(): Trouble with parsing pubKey: %q", err.Error())
+		log.Printf("NewJwtCheckerConf(): Trouble with parsing pubKey: %q", err.Error())
+		return nil, err
 	}
-	return &JWTChecker{pubKey: pubKey}
+	edKey, ok := pubKey.(ed25519.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("GetNewJwtGenerator: key is not of type ed25519.PrivateKey")
+	}
+	return &JWTChecker{pubKey: edKey, aTokenLen: conf.ATokenLen}, nil
 }
 
 func (j *JWTChecker) IsValidToken(cToken string) (*TokenClaims, error) {
 	claims := &TokenClaims{}
 
 	token, err := jwt.ParseWithClaims(cToken, claims, func(t *jwt.Token) (any, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
+		if _, ok := t.Method.(*jwt.SigningMethodEd25519); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return j.pubKey, nil
@@ -60,6 +62,9 @@ func (j *JWTChecker) IsValidToken(cToken string) (*TokenClaims, error) {
 }
 
 func (j *JWTChecker) IsValidAccess(aToken string) (*TokenClaims, error) {
+	if len(aToken) != j.aTokenLen {
+		return nil, fmt.Errorf("wrong len, %d != %d", len(aToken), j.aTokenLen)
+	}
 	claims, err := j.IsValidToken(aToken)
 	if err != nil {
 		return nil, err

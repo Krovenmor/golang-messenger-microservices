@@ -10,7 +10,7 @@ func SetupValidator() error {
 
 	r.SetRangesAlias("auth_password", "PASS_MIN_LENGTH", "PASS_MAX_LENGTH")
 	r.SetRangesAlias("auth_login", "LOGIN_MIN_LENGTH", "LOGIN_MAX_LENGTH")
-	r.SetLenAlias("refresh_token", "REFRESH_TOKEN_LEN")
+	r.SetLenAliasBasic("refresh_token", "REFRESH_TOKEN_LEN", "")
 
 	return r.Err()
 }
