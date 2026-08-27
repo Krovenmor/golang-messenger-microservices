@@ -3,6 +3,7 @@ package http
 import (
 	"MyMessenger/pkg/utils"
 	"MyMessenger/services/msg/internal/service"
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -72,6 +73,46 @@ func (h *Handler) GetProfilePublic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	utils.Send(w, ToPublicProfileBody(profile))
+}
+
+func (h *Handler) PostAvatar(w http.ResponseWriter, r *http.Request) {
+	avatarId, err := utils.GetUuidFromPath(r, targetKey)
+	if err != nil {
+		http.Error(w, "Bad Photo ID", http.StatusBadRequest)
+		return
+	}
+	userId, err := utils.GetUuidFromContext(r)
+	if err != nil {
+		log.Printf("PostAvatar: trouble with GetUuidFromContext, err: %q", err)
+		http.Error(w, "Internal", http.StatusInternalServerError)
+		return
+	}
+	err = h.msg.AddAvatarToProfile(context.Background(), userId, avatarId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) DelAvatar(w http.ResponseWriter, r *http.Request) {
+	avatarId, err := utils.GetUuidFromPath(r, targetKey)
+	if err != nil {
+		http.Error(w, "Bad Photo ID", http.StatusBadRequest)
+		return
+	}
+	userId, err := utils.GetUuidFromContext(r)
+	if err != nil {
+		log.Printf("DelAvatar: trouble with GetUuidFromContext, err: %q", err)
+		http.Error(w, "Internal", http.StatusInternalServerError)
+		return
+	}
+	err = h.msg.DelAvatarFromProfile(context.Background(), userId, avatarId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) NewChat(w http.ResponseWriter, r *http.Request) {

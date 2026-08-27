@@ -129,7 +129,13 @@
     "encryptedPrvKey": "Encrypted Private Key",  
     "kdfSalt": "KDF Salt",
     "keyNonce": "Your nonce",
-    "createdAt": "time, example: '2026-07-28T19:56:51.855208Z'"
+    "createdAt": "time, example: '2026-07-28T19:56:51.855208Z'",
+
+    // Additional Info, {} if no additional info
+    "additional": {
+        // [] if no avatars
+        "avatars": ["UUID from Media Api", ...]
+    }
 }  
 ```
 
@@ -142,9 +148,19 @@
     "name": "Name",  
     "userName": "User Name",  
     "pubKey": "Public key",
-    "createdAt": "time, example: '2026-07-28T19:56:51.855208Z'"
+    "createdAt": "time, example: '2026-07-28T19:56:51.855208Z'",
+
+    "additional": {
+        "avatars": ["UUID from Media Api", ...]
+    }
 }  
 ```
+
+## **"POST /api/msg/profile/avatar/{uuid}"** - add new avatar to your profile
+- uuid - Your photoId from Media API
+
+## **"DELETE /api/msg/profile/avatar/{uuid}"** - del avatar from your profile
+- uuid - Your photoId from Media API
 
 ## **"GET /api/msg/profile/chats"** - get all your chats  
 ### Response body  
@@ -436,3 +452,59 @@ Statuses:
 
 LastSeen - Unix time  
 If LastSeen = 0 then profile not exists or was online a very long time ago  
+
+# **Media API:**
+## - "GET /api/media/profile" - get info
+### Response body (Example)  
+```json
+{
+    // In bytes
+    "maxSpace": 1234,
+    // In bytes
+	"spaceFilled": 123,
+    "savedFiles": 2
+}
+```
+
+## - "GET /api/media/profile/files" - get saved files info
+- Query params:  
+'from' - mediaId from (UUIDv7) (if you don't provide 'from', you'll get last 'q' files)
+'q' - quantity (int, default = 10, min=1, max=100)
+### Response body (Example)  
+```json
+[
+    {
+        "mediaId": "UUIDv7",
+        "type": "photo",
+        "subType": "avatar",
+        // In bytes
+        "size": 123,
+        "isPublic": true/false,
+        // (RFC 3339 format)
+        "addedAt": "2026-07-28T00:21:09.904497Z"
+    }
+]
+```
+- All possible types:
+    - "photo", sub types:
+        - "avatar"
+
+
+## - "POST /api/media/public/avatar" - upload new avatar photo
+### Request body: (Example)  
+`multipart/form-data` by key 'image'
+### Response body (Example)  
+```json
+{
+    "photoId": "UUIDv7"
+}
+```
+### Restrictions:
+- Max image size: 600x600 px
+- Supported formats: png, jpeg
+
+## - "DELETE /api/media/public/avatar/{photoId}" - delete your avatar photo
+
+# **Static Vault:**
+## - "GET /static/avatars/{photoId}" - get avatar (it's public and not encrypted)
+### Response will be image/jpeg

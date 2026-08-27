@@ -56,13 +56,16 @@ func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {
 	}
 
 	profilePath := " /api/msg/profile"
-	profileWithTargetPath := profilePath + fmt.Sprintf("/{%s}", targetKey)
+	targetPath := fmt.Sprintf("/{%s}", targetKey)
 
 	protected("POST"+profilePath, h.NewProfile)
 	protected("GET"+profilePath, h.GetProfilePrivate)
-	protected("GET"+profileWithTargetPath, h.GetProfilePublic)
+	protected("GET"+profilePath+targetPath, h.GetProfilePublic)
 	protected("GET"+profilePath+"/chats", h.GetProfileChats)
 	protected("GET"+profilePath+"/chats/full", h.GetProfileChatsExtended)
+
+	protected("POST"+profilePath+"/avatar"+targetPath, h.PostAvatar)
+	protected("DELETE"+profilePath+"/avatar"+targetPath, h.DelAvatar)
 
 	chatPath := " /api/msg/chat"
 	chatWithIdPath := chatPath + fmt.Sprintf("/{%s}", chatIdKey)

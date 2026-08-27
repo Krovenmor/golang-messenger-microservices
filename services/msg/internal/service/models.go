@@ -44,6 +44,7 @@ type Profile struct {
 	KDFSalt    string
 	KeyNonce   string
 	CreatedAt  time.Time
+	Additional json.RawMessage
 }
 
 type ChatMember struct {

@@ -18,6 +18,7 @@ func getProfileByVal[T any](ctx context.Context, pool *pgxpool.Pool, query strin
 		&profile.KDFSalt,
 		&profile.KeyNonce,
 		&profile.CreatedAt,
+		&profile.Additional,
 	)
 	if err != nil {
 		return nil, getErrorMsg(err)

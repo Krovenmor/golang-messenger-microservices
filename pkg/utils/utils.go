@@ -77,3 +77,11 @@ func Hash(data string) string {
 	hash := sha256.Sum256([]byte(data))
 	return hex.EncodeToString(hash[:])
 }
+
+func MapSlice[T any, R any](input []T, mapFunc func(T) R) []R {
+	result := make([]R, len(input))
+	for i, v := range input {
+		result[i] = mapFunc(v)
+	}
+	return result
+}

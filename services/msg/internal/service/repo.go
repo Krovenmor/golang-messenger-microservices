@@ -13,6 +13,9 @@ type MessageRepo interface {
 	IsProfileInChat(ctx context.Context, userId, chatId uuid.UUID) error
 	IsProfilesHaveAPrivateChat(ctx context.Context, userIdF, userIdS uuid.UUID) (uuid.UUID, error)
 
+	AddAvatarToProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error
+	DelAvatarFromProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error
+
 	NewChat(ctx context.Context, chatId, fUser, sUser uuid.UUID) error
 	GetChats(ctx context.Context, userId uuid.UUID) ([]uuid.UUID, error)
 	GetChatsExtended(ctx context.Context, userId uuid.UUID) ([]ChatFullInfo, error)

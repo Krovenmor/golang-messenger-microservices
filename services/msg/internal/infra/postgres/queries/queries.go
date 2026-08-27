@@ -21,6 +21,9 @@ type Queries struct {
 	IsProfileInChat    string
 	GetProfileUserName string
 
+	AddAvatarPhoto string
+	DelAvatarPhoto string
+
 	PostMessage   string
 	GetMessage    string
 	UpdateMessage string
@@ -74,6 +77,9 @@ func GetQueries() (*Queries, error) {
 		GetReactions: get("get_reactions"),
 		NewReaction:  get("new_reaction"),
 		DelReaction:  get("delete_reaction"),
+
+		AddAvatarPhoto: get("add_avatar_photo"),
+		DelAvatarPhoto: get("del_avatar_photo"),
 	}
 
 	if err != nil {

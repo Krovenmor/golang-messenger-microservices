@@ -249,3 +249,25 @@ func (r *PostagreRepo) IsProfilesHaveAPrivateChat(ctx context.Context, userIdF, 
 	}
 	return chatId, nil
 }
+
+func (r *PostagreRepo) AddAvatarToProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error {
+	t, err := r.pool.Exec(ctx, r.q.AddAvatarPhoto, userId, avatarId.String())
+	if err != nil {
+		return getErrorMsg(err)
+	}
+	if t.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (r *PostagreRepo) DelAvatarFromProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error {
+	t, err := r.pool.Exec(ctx, r.q.DelAvatarPhoto, userId, avatarId.String())
+	if err != nil {
+		return getErrorMsg(err)
+	}
+	if t.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"MyMessenger/pkg/utils"
 	"MyMessenger/services/msg/internal/service"
 
 	"github.com/google/uuid"
@@ -28,16 +29,18 @@ func ToPrivateProfileBody(p *service.Profile) *PrivateProfileResponseBody {
 		KDFSalt:    p.KDFSalt,
 		CreatedAt:  p.CreatedAt,
 		KeyNonce:   p.KeyNonce,
+		Additional: p.Additional,
 	}
 }
 
 func ToPublicProfileBody(p *service.Profile) *PublicProfileResponseBody {
 	return &PublicProfileResponseBody{
-		UserId:    p.UserId,
-		Name:      p.Name,
-		UserName:  p.UserName,
-		PublicKey: p.PublicKey,
-		CreatedAt: p.CreatedAt,
+		UserId:     p.UserId,
+		Name:       p.Name,
+		UserName:   p.UserName,
+		PublicKey:  p.PublicKey,
+		CreatedAt:  p.CreatedAt,
+		Additional: p.Additional,
 	}
 }
 
@@ -61,16 +64,8 @@ func FromServiceFullChatInfo(c service.ChatFullInfo) FullChatsInfoResponseBody {
 	}
 }
 
-func MapSlice[T any, R any](input []T, mapFunc func(T) R) []R {
-	result := make([]R, len(input))
-	for i, v := range input {
-		result[i] = mapFunc(v)
-	}
-	return result
-}
-
 func FromServiceFullChatsInfo(chats []service.ChatFullInfo) []FullChatsInfoResponseBody {
-	return MapSlice(chats, FromServiceFullChatInfo)
+	return utils.MapSlice(chats, FromServiceFullChatInfo)
 }
 
 func FromServiceChatInfo(info *service.ChatInfo) *ChatInfoResponseBody {
@@ -99,10 +94,10 @@ func FromServiceMessage(msg service.Message) MessageResponseBody {
 		RedactedAt:  msg.RedactedAt,
 		DeletedAt:   msg.DeletedAt,
 		ReplyToId:   msg.ReplyToId,
-		Reactions:   MapSlice(msg.Reactions, FromServiceReaction),
+		Reactions:   utils.MapSlice(msg.Reactions, FromServiceReaction),
 	}
 }
 
 func FromServiceMessages(msgs []service.Message) []MessageResponseBody {
-	return MapSlice(msgs, FromServiceMessage)
+	return utils.MapSlice(msgs, FromServiceMessage)
 }

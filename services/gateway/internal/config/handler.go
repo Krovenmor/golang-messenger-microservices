@@ -10,6 +10,7 @@ type MainHandlerConfig struct {
 	MsgServiceURL    string
 	WsServiceURL     string
 	StatusServiceURL string
+	MediaServiceURL  string
 }
 
 type MiddlewareConfig struct {
@@ -37,6 +38,7 @@ func GetMainHandlerConfig() (*MainHandlerConfig, error) {
 		MsgServiceURL:    r.GetString("MSG_URL"),
 		WsServiceURL:     r.GetString("WS_URL"),
 		StatusServiceURL: r.GetString("STAT_URL"),
+		MediaServiceURL:  r.GetString("MEDIA_URL"),
 	}
 
 	return &conf, r.Err()
@@ -52,7 +54,7 @@ func GetMiddlewareConfig() (*MiddlewareConfig, error) {
 		LimitRateIp:  r.GetFloat64("LIMIT_RATE_IP"),
 		LimitBurstIp: r.GetInt("LIMIT_BURST_IP"),
 
-		TokenLenght:     r.GetInt("TOKEN_LENGTH"),
+		TokenLenght:     r.GetInt("JWT_ACCESS_TOKEN_LEN"),
 		HeaderLength:    r.GetInt("TOKEN_HEADER_LENGTH"),
 		PayloadLength:   r.GetInt("TOKEN_PAYLOAD_LENGTH"),
 		SignatureLength: r.GetInt("TOKEN_SIGNATURE_LENGTH"),

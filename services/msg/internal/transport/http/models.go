@@ -49,6 +49,8 @@ type PrivateProfileResponseBody struct {
 	KDFSalt    string    `json:"kdfSalt"`
 	KeyNonce   string    `json:"keyNonce"`
 	CreatedAt  time.Time `json:"createdAt"`
+
+	Additional json.RawMessage `json:"additional"`
 }
 
 type PublicProfileResponseBody struct {
@@ -57,6 +59,8 @@ type PublicProfileResponseBody struct {
 	UserName  string    `json:"userName"`
 	PublicKey string    `json:"pubKey"`
 	CreatedAt time.Time `json:"createdAt"`
+
+	Additional json.RawMessage `json:"additional"`
 }
 
 type NewChatResponseBody struct {

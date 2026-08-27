@@ -42,6 +42,14 @@ func (m *MessageServiceImpl) IsProfileInChat(ctx context.Context, userId, chatId
 	return m.repo.IsProfileInChat(ctx, userId, chatId)
 }
 
+func (m *MessageServiceImpl) AddAvatarToProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error {
+	return m.repo.AddAvatarToProfile(ctx, userId, avatarId)
+}
+
+func (m *MessageServiceImpl) DelAvatarFromProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error {
+	return m.repo.DelAvatarFromProfile(ctx, userId, avatarId)
+}
+
 func (m *MessageServiceImpl) CreateNewChat(ctx context.Context, fUser, sUser uuid.UUID) (uuid.UUID, error) {
 	if fUser == sUser {
 		return uuid.Nil, fmt.Errorf("can't create chat with fUUID == sUUID")

@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"errors"
+	"log"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -17,12 +18,16 @@ var (
 	ErrNotFoundOrForbidden = errors.New("forbidden or not found")
 	ErrForbidden           = errors.New("forbidden")
 	ErrInternal            = errors.New("internal")
+	ErrTooMuch             = errors.New("too much")
+
+	ErrUnknown = errors.New("unknown")
 )
 
 func getErrorMsg(err error) error {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
-		if pgErr.Code == "23503" {
+		switch pgErr.Code {
+		case "23503":
 			switch pgErr.ConstraintName {
 			case "messages_chat_id_fkey":
 				return ErrChatNotFound
@@ -33,13 +38,21 @@ func getErrorMsg(err error) error {
 			case "message_reactions_emoji_fkey":
 				return ErrEmojiNotFound
 			}
-		}
-		if pgErr.Code == "23505" {
+
+		case "23505":
 			return ErrAlreadyExists
+
+		case "23514":
+			switch pgErr.ConstraintName {
+			case "check_avatars_in_additional":
+				return ErrTooMuch
+			}
 		}
+
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrNotFound
 	}
-	return err
+	log.Printf("Not defined err: %q", err)
+	return ErrUnknown
 }

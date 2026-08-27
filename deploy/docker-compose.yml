@@ -52,6 +52,22 @@ services:
       timeout: 3s
       retries: 5
   
+  media-db:
+    image: postgres:latest
+    environment:
+      - POSTGRES_DB=media_db
+      - POSTGRES_USER=media_user
+      - POSTGRES_PASSWORD=media_pass
+    volumes:
+      - media_db_data:/var/lib/data
+    ports:
+      - "5429:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U media_user -d media_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+  
   #
   # Services
   #
@@ -126,20 +142,23 @@ services:
       redis-db:
         condition: service_healthy
 
-  #
-  # Web and GateWay
-  #
-
-  web-service:
-    build:
-      context: ../web/
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: /api
-    ports:
-      - "443:443"
+  media-service:
+    build: 
+      context: ..
+      dockerfile: services/media/Dockerfile
+    env_file:
+      - ../config/common.env
+      - ../config/media.env
+    depends_on:
+      media-db:
+        condition: service_healthy
     volumes:
-      - ../certs/ssl:/etc/nginx/certs/
+      - ../certs/jwt/public.key:/app/certs/jwt/public.key:ro
+      - ../data:/var/data
+
+  #
+  # GateWay for all services
+  #
 
   gateway-service:
     build: 
@@ -152,7 +171,32 @@ services:
     volumes:
       - ../certs/jwt/public.key:/app/certs/jwt/public.key:ro
 
+  #
+  # Web
+  #
+
+  frontend-service:
+    build:
+      context: ../web/
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+
+  #
+  # Main Entry
+  #
+
+  edge-service:
+    build: ../services/edge
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ../certs/ssl:/etc/nginx/certs/:ro
+      - ../data:/var/data:ro
+
 volumes:
   auth_db_data:
   msg_db_data:
   redis_data:
+  media_db_data:

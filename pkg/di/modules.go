@@ -4,6 +4,7 @@ import (
 	"MyMessenger/pkg/config"
 	"MyMessenger/pkg/jwt"
 	"MyMessenger/pkg/redis"
+	"MyMessenger/pkg/repo"
 
 	"go.uber.org/fx"
 )
@@ -48,5 +49,12 @@ var RedisPubSubModule = fx.Options(
 	fx.Provide(
 		redis.NewRedisSubscriber,
 		redis.NewRedisPublisher,
+	),
+)
+
+var PgxpoolModule = fx.Options(
+	fx.Provide(
+		config.GetRepoConfig,
+		repo.NewPool,
 	),
 )
