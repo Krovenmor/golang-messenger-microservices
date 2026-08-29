@@ -54,6 +54,7 @@ func (h *MainHandler) RegisterRoutes(m *http.ServeMux) (http.Handler, error) {
 	protected("/api/msg/", msgProxy)
 	protected("/api/status/", statProxy)
 	protected("/api/media/", mediaProxy)
+	protected("/api/profile", profileProxy)
 	protected("/api/profile/", profileProxy)
 
 	m.Handle("/api/ws", h.middleware.QueryParamMiddleware(wsProxy, "token"))
