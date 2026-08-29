@@ -59,5 +59,6 @@ func (r *RedisProfileReader) onEvent(ctx context.Context, event broker.ProfileEv
 	default:
 		log.Printf("redisReader.onEvent(): unknown event=%q", event.Type)
 	}
+	log.Printf("redisReader.onEvent(): success event=%v", event)
 	return nil
 }
