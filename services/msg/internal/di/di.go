@@ -3,12 +3,14 @@ package di
 import (
 	stdconfig "MyMessenger/pkg/config"
 	"MyMessenger/pkg/di"
+	"MyMessenger/pkg/redis/reader"
 	"MyMessenger/pkg/repo"
 	"MyMessenger/services/msg/internal/config"
 	"MyMessenger/services/msg/internal/infra/postgres"
 	"MyMessenger/services/msg/internal/infra/postgres/migrations"
 	"MyMessenger/services/msg/internal/infra/redis"
 	"MyMessenger/services/msg/internal/service"
+	"MyMessenger/services/msg/internal/transport/event"
 	web "MyMessenger/services/msg/internal/transport/http"
 
 	"net/http"
@@ -64,27 +66,30 @@ func GetModule() fx.Option {
 		// Msg Service
 		fx.Provide(
 			fx.Annotate(
-				service.NewMessageServiceImpl,
+				service.NewMessageService,
 				fx.As(new(service.MessageService)),
 			),
 		),
 
-		// ServeMux
+		// HTTP
 		fx.Provide(
 			http.NewServeMux,
-		),
-
-		fx.Provide(
 			web.NewHandler,
+			(*web.Handler).RegisterRoutes,
 		),
 
+		// Event
 		fx.Provide(
-			(*web.Handler).RegisterRoutes,
+			fx.Annotate(
+				event.NewProfileReader,
+				fx.As(new(reader.CallbackReader)),
+			),
 		),
 
 		// Final, main invoke
 		fx.Invoke(
 			di.InvokeServer,
+			reader.NewRedisProfileReader,
 		),
 	)
 }

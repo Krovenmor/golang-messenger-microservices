@@ -7,13 +7,9 @@ import (
 )
 
 type MessageService interface {
-	NewProfile(ctx context.Context, profile Profile) error
-	GetProfileById(ctx context.Context, userId uuid.UUID) (*Profile, error)
-	GetProfileByUserName(ctx context.Context, username string) (*Profile, error)
-	IsProfileInChat(ctx context.Context, userId, chatId uuid.UUID) error
+	NewProfile(ctx context.Context, userId uuid.UUID) error
 
-	AddAvatarToProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error
-	DelAvatarFromProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error
+	IsProfileInChat(ctx context.Context, userId, chatId uuid.UUID) error
 
 	PostMessage(ctx context.Context, chatId uuid.UUID, msg ToPostMessage) (uuid.UUID, error)
 	GetMessage(ctx context.Context, chatId, msgId uuid.UUID) (*Message, error)

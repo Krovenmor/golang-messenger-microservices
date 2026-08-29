@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func (m *MessageServiceImpl) checkQ(q int) error {
+func (m *messageService) checkQ(q int) error {
 	if q > m.conf.MaxQuantity {
 		return fmt.Errorf("too big quantity")
 	}

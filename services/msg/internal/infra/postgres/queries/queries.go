@@ -16,13 +16,9 @@ func getQuery(queryName string) (string, error) {
 }
 
 type Queries struct {
-	GetProfileId       string
-	NewProfile         string
-	IsProfileInChat    string
-	GetProfileUserName string
+	NewProfile string
 
-	AddAvatarPhoto string
-	DelAvatarPhoto string
+	IsProfileInChat string
 
 	PostMessage   string
 	GetMessage    string
@@ -57,13 +53,12 @@ func GetQueries() (*Queries, error) {
 	}
 
 	queries := Queries{
+		NewProfile: get("new_profile"),
+
 		GetChatHistory:                  get("get_chat_history"),
-		GetProfileId:                    get("get_profile_id"),
 		NewChat:                         get("new_chat"),
-		NewProfile:                      get("new_profile"),
 		PostMessage:                     get("post_message"),
 		IsProfileInChat:                 get("is_profile_in_chat"),
-		GetProfileUserName:              get("get_profile_username"),
 		GetChats:                        get("get_chats"),
 		GetChatInfo:                     get("get_chat_info"),
 		GetChatMembers:                  get("get_chat_members"),
@@ -77,9 +72,6 @@ func GetQueries() (*Queries, error) {
 		GetReactions: get("get_reactions"),
 		NewReaction:  get("new_reaction"),
 		DelReaction:  get("delete_reaction"),
-
-		AddAvatarPhoto: get("add_avatar_photo"),
-		DelAvatarPhoto: get("del_avatar_photo"),
 	}
 
 	if err != nil {

@@ -31,18 +31,13 @@ func NewRepo(pool *pgxpool.Pool) (*PostagreRepo, error) {
 	}, nil
 }
 
-func (r *PostagreRepo) NewProfile(ctx context.Context, profile *service.Profile) error {
-	_, err := r.pool.Exec(ctx, r.q.NewProfile,
-		profile.UserId,
-		profile.UserName,
-		profile.Name,
-		profile.PublicKey,
-		profile.PrivateKey,
-		profile.KDFSalt,
-		profile.KeyNonce,
-	)
+func (r *PostagreRepo) NewProfile(ctx context.Context, userId uuid.UUID) error {
+	t, err := r.pool.Exec(ctx, r.q.NewProfile, userId)
 	if err != nil {
 		return getErrorMsg(err)
+	}
+	if t.RowsAffected() == 0 {
+		return service.ErrAlreadyExists
 	}
 	return nil
 }
@@ -53,7 +48,7 @@ func (r *PostagreRepo) NewChat(ctx context.Context, chatId, fUser, sUser uuid.UU
 		return getErrorMsg(err)
 	}
 	if t.RowsAffected() == 0 {
-		return ErrAlreadyExists
+		return service.ErrAlreadyExists
 	}
 	return nil
 }
@@ -64,7 +59,7 @@ func (r *PostagreRepo) NewMessage(ctx context.Context, chatId uuid.UUID, msg *se
 		return getErrorMsg(err)
 	}
 	if t.RowsAffected() == 0 {
-		return ErrAlreadyExists
+		return service.ErrAlreadyExists
 	}
 	return nil
 }
@@ -99,7 +94,7 @@ func (r *PostagreRepo) RedactMessage(ctx context.Context, chatId, msgId uuid.UUI
 		return getErrorMsg(err)
 	}
 	if t.RowsAffected() == 0 {
-		return ErrNotFoundOrForbidden
+		return service.ErrNotFoundOrForbidden
 	}
 	return nil
 }
@@ -110,17 +105,9 @@ func (r *PostagreRepo) DelMessage(ctx context.Context, chatId, msgId, userId uui
 		return getErrorMsg(err)
 	}
 	if t.RowsAffected() == 0 {
-		return ErrNotFoundOrForbidden
+		return service.ErrNotFoundOrForbidden
 	}
 	return nil
-}
-
-func (r *PostagreRepo) GetProfileById(ctx context.Context, userId uuid.UUID) (*service.Profile, error) {
-	return getProfileByVal(ctx, r.pool, r.q.GetProfileId, userId)
-}
-
-func (r *PostagreRepo) GetProfileByUserName(ctx context.Context, username string) (*service.Profile, error) {
-	return getProfileByVal(ctx, r.pool, r.q.GetProfileUserName, username)
 }
 
 func (r *PostagreRepo) GetChats(ctx context.Context, userId uuid.UUID) ([]uuid.UUID, error) {
@@ -211,7 +198,7 @@ func (r *PostagreRepo) NewReaction(ctx context.Context, userId, chatId, msgId uu
 		return getErrorMsg(err)
 	}
 	if t.RowsAffected() == 0 {
-		return ErrForbidden
+		return service.ErrForbidden
 	}
 	return nil
 }
@@ -222,7 +209,7 @@ func (r *PostagreRepo) DelReaction(ctx context.Context, userId, chatId, msgId uu
 		return getErrorMsg(err)
 	}
 	if t.RowsAffected() == 0 {
-		return ErrForbidden
+		return service.ErrForbidden
 	}
 	return nil
 }
@@ -234,7 +221,7 @@ func (r *PostagreRepo) IsProfileInChat(ctx context.Context, userId, chatId uuid.
 		return getErrorMsg(err)
 	}
 	if isInChat != 1 {
-		return ErrNotFound
+		return service.ErrNotFound
 	}
 	return nil
 }
@@ -248,26 +235,4 @@ func (r *PostagreRepo) IsProfilesHaveAPrivateChat(ctx context.Context, userIdF, 
 		return chatId, getErrorMsg(err)
 	}
 	return chatId, nil
-}
-
-func (r *PostagreRepo) AddAvatarToProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error {
-	t, err := r.pool.Exec(ctx, r.q.AddAvatarPhoto, userId, avatarId.String())
-	if err != nil {
-		return getErrorMsg(err)
-	}
-	if t.RowsAffected() == 0 {
-		return ErrNotFound
-	}
-	return nil
-}
-
-func (r *PostagreRepo) DelAvatarFromProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error {
-	t, err := r.pool.Exec(ctx, r.q.DelAvatarPhoto, userId, avatarId.String())
-	if err != nil {
-		return getErrorMsg(err)
-	}
-	if t.RowsAffected() == 0 {
-		return ErrNotFound
-	}
-	return nil
 }

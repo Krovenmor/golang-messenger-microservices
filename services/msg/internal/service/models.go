@@ -35,22 +35,8 @@ type Reaction struct {
 	Users []uuid.UUID
 }
 
-type Profile struct {
-	UserId     uuid.UUID
-	Name       string
-	UserName   string
-	PublicKey  string
-	PrivateKey string
-	KDFSalt    string
-	KeyNonce   string
-	CreatedAt  time.Time
-	Additional json.RawMessage
-}
-
 type ChatMember struct {
-	UserId   uuid.UUID
-	Name     string
-	JoinedAt time.Time
+	UserId uuid.UUID
 }
 
 type ChatInfo struct {

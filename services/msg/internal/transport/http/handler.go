@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	apiPath      = " /api/msg"
 	chatIdKey    = "chatid"
 	messageIdKey = "messageid"
 	targetKey    = "target"
@@ -55,19 +56,12 @@ func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {
 		m.Handle(pattern, h.auth.Middleware(handlerFunc))
 	}
 
-	profilePath := " /api/msg/profile"
-	targetPath := fmt.Sprintf("/{%s}", targetKey)
+	chatsPath := apiPath + "/chats"
 
-	protected("POST"+profilePath, h.NewProfile)
-	protected("GET"+profilePath, h.GetProfilePrivate)
-	protected("GET"+profilePath+targetPath, h.GetProfilePublic)
-	protected("GET"+profilePath+"/chats", h.GetProfileChats)
-	protected("GET"+profilePath+"/chats/full", h.GetProfileChatsExtended)
+	protected("GET"+chatsPath, h.GetProfileChats)
+	protected("GET"+chatsPath+"/full", h.GetProfileChatsExtended)
 
-	protected("POST"+profilePath+"/avatar"+targetPath, h.PostAvatar)
-	protected("DELETE"+profilePath+"/avatar"+targetPath, h.DelAvatar)
-
-	chatPath := " /api/msg/chat"
+	chatPath := apiPath + "/chat"
 	chatWithIdPath := chatPath + fmt.Sprintf("/{%s}", chatIdKey)
 
 	protected("POST"+chatPath, h.NewChat)
@@ -81,7 +75,7 @@ func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {
 	protected("PUT"+chatAndMessagePath, h.ChangeMessage)
 	protected("DELETE"+chatAndMessagePath, h.DeleteMessage)
 
-	protected("GET /api/msg/reactions", h.GetSupportedReactions)
+	protected("GET"+apiPath+"/reactions", h.GetSupportedReactions)
 
 	reactionPath := chatAndMessagePath + "/reaction"
 	reactionEmojiPath := reactionPath + fmt.Sprintf("/{%s}", emojiKey)

@@ -7,14 +7,10 @@ import (
 )
 
 type MessageRepo interface {
-	NewProfile(ctx context.Context, profile *Profile) error
-	GetProfileById(ctx context.Context, userId uuid.UUID) (*Profile, error)
-	GetProfileByUserName(ctx context.Context, username string) (*Profile, error)
+	NewProfile(ctx context.Context, userId uuid.UUID) error
+
 	IsProfileInChat(ctx context.Context, userId, chatId uuid.UUID) error
 	IsProfilesHaveAPrivateChat(ctx context.Context, userIdF, userIdS uuid.UUID) (uuid.UUID, error)
-
-	AddAvatarToProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error
-	DelAvatarFromProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error
 
 	NewChat(ctx context.Context, chatId, fUser, sUser uuid.UUID) error
 	GetChats(ctx context.Context, userId uuid.UUID) ([]uuid.UUID, error)
@@ -31,4 +27,14 @@ type MessageRepo interface {
 	GetEmojis(ctx context.Context) ([]string, error)
 	NewReaction(ctx context.Context, userId, chatId, msgId uuid.UUID, emoji string) error
 	DelReaction(ctx context.Context, userId, chatId, msgId uuid.UUID, emoji string) error
+}
+
+type EventPublisher interface {
+	PublishNewChat(ctx context.Context, chatId uuid.UUID, usersTo []uuid.UUID)
+	PublishNewMessage(ctx context.Context, chatId, msgId uuid.UUID)
+	PublishMessageWasRedacted(ctx context.Context, chatId, msgId uuid.UUID)
+	PublishMessageWasDeleted(ctx context.Context, chatId, msgId uuid.UUID)
+
+	PublishNewReaction(ctx context.Context, chatId, msgId, userId uuid.UUID, emoji string)
+	PublishDelReaction(ctx context.Context, chatId, msgId, userId uuid.UUID, emoji string)
 }

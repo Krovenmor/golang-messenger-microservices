@@ -6,11 +6,12 @@ import (
 )
 
 type MainHandlerConfig struct {
-	AuthServiceURL   string
-	MsgServiceURL    string
-	WsServiceURL     string
-	StatusServiceURL string
-	MediaServiceURL  string
+	AuthServiceURL    string
+	MsgServiceURL     string
+	WsServiceURL      string
+	StatusServiceURL  string
+	MediaServiceURL   string
+	ProfileServiceURL string
 }
 
 type MiddlewareConfig struct {
@@ -34,11 +35,12 @@ func GetMainHandlerConfig() (*MainHandlerConfig, error) {
 	r := config.NewConfigReader()
 
 	conf := MainHandlerConfig{
-		AuthServiceURL:   r.GetString("AUTH_URL"),
-		MsgServiceURL:    r.GetString("MSG_URL"),
-		WsServiceURL:     r.GetString("WS_URL"),
-		StatusServiceURL: r.GetString("STAT_URL"),
-		MediaServiceURL:  r.GetString("MEDIA_URL"),
+		AuthServiceURL:    r.GetString("AUTH_URL"),
+		MsgServiceURL:     r.GetString("MSG_URL"),
+		WsServiceURL:      r.GetString("WS_URL"),
+		StatusServiceURL:  r.GetString("STAT_URL"),
+		MediaServiceURL:   r.GetString("MEDIA_URL"),
+		ProfileServiceURL: r.GetString("PROFILE_URL"),
 	}
 
 	return &conf, r.Err()

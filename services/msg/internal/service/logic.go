@@ -4,53 +4,34 @@ import (
 	"MyMessenger/services/msg/internal/config"
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 )
 
-var (
-	ErrAlreadyExists = fmt.Errorf("already Exists")
-)
-
-type MessageServiceImpl struct {
+type messageService struct {
 	repo MessageRepo
 	pub  EventPublisher
 	conf *config.MessageConfig
 }
 
-func NewMessageServiceImpl(repo MessageRepo, pub EventPublisher, conf *config.MessageConfig) *MessageServiceImpl {
-	return &MessageServiceImpl{
+func NewMessageService(repo MessageRepo, pub EventPublisher, conf *config.MessageConfig) *messageService {
+	return &messageService{
 		repo: repo,
 		conf: conf,
 		pub:  pub,
 	}
 }
 
-func (m *MessageServiceImpl) NewProfile(ctx context.Context, profile Profile) error {
-	return m.repo.NewProfile(ctx, &profile)
+func (m *messageService) NewProfile(ctx context.Context, userId uuid.UUID) error {
+	return m.repo.NewProfile(ctx, userId)
 }
 
-func (m *MessageServiceImpl) GetProfileById(ctx context.Context, userId uuid.UUID) (*Profile, error) {
-	return m.repo.GetProfileById(ctx, userId)
-}
-
-func (m *MessageServiceImpl) GetProfileByUserName(ctx context.Context, username string) (*Profile, error) {
-	return m.repo.GetProfileByUserName(ctx, username)
-}
-
-func (m *MessageServiceImpl) IsProfileInChat(ctx context.Context, userId, chatId uuid.UUID) error {
+func (m *messageService) IsProfileInChat(ctx context.Context, userId, chatId uuid.UUID) error {
 	return m.repo.IsProfileInChat(ctx, userId, chatId)
 }
 
-func (m *MessageServiceImpl) AddAvatarToProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error {
-	return m.repo.AddAvatarToProfile(ctx, userId, avatarId)
-}
-
-func (m *MessageServiceImpl) DelAvatarFromProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error {
-	return m.repo.DelAvatarFromProfile(ctx, userId, avatarId)
-}
-
-func (m *MessageServiceImpl) CreateNewChat(ctx context.Context, fUser, sUser uuid.UUID) (uuid.UUID, error) {
+func (m *messageService) CreateNewChat(ctx context.Context, fUser, sUser uuid.UUID) (uuid.UUID, error) {
 	if fUser == sUser {
 		return uuid.Nil, fmt.Errorf("can't create chat with fUUID == sUUID")
 	}
@@ -67,10 +48,11 @@ func (m *MessageServiceImpl) CreateNewChat(ctx context.Context, fUser, sUser uui
 	return nChatId, nil
 }
 
-func (m *MessageServiceImpl) PostMessage(ctx context.Context, chatId uuid.UUID, msg ToPostMessage) (uuid.UUID, error) {
+func (m *messageService) PostMessage(ctx context.Context, chatId uuid.UUID, msg ToPostMessage) (uuid.UUID, error) {
 	msgId, err := uuid.NewV7()
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("trouble with gen UUID for new message: %w", err)
+		log.Printf("trouble with gen UUID for new message: %w", err)
+		return uuid.Nil, ErrInternal
 	}
 	rMsg := Message{
 		MessageId:   msgId,
@@ -89,11 +71,11 @@ func (m *MessageServiceImpl) PostMessage(ctx context.Context, chatId uuid.UUID, 
 	return msgId, nil
 }
 
-func (m *MessageServiceImpl) GetMessage(ctx context.Context, chatId, msgId uuid.UUID) (*Message, error) {
+func (m *messageService) GetMessage(ctx context.Context, chatId, msgId uuid.UUID) (*Message, error) {
 	return m.repo.GetMessage(ctx, chatId, msgId)
 }
 
-func (m *MessageServiceImpl) RedactMessage(ctx context.Context, chatId, msgId uuid.UUID, msg ToPostMessage) error {
+func (m *messageService) RedactMessage(ctx context.Context, chatId, msgId uuid.UUID, msg ToPostMessage) error {
 	err := m.repo.RedactMessage(ctx, chatId, msgId, &msg)
 	if err != nil {
 		return err
@@ -102,7 +84,7 @@ func (m *MessageServiceImpl) RedactMessage(ctx context.Context, chatId, msgId uu
 	return nil
 }
 
-func (m *MessageServiceImpl) DelMessage(ctx context.Context, chatId, msgId, userId uuid.UUID) error {
+func (m *messageService) DelMessage(ctx context.Context, chatId, msgId, userId uuid.UUID) error {
 	err := m.repo.DelMessage(ctx, chatId, msgId, userId)
 	if err != nil {
 		return err
@@ -111,19 +93,19 @@ func (m *MessageServiceImpl) DelMessage(ctx context.Context, chatId, msgId, user
 	return nil
 }
 
-func (m *MessageServiceImpl) GetChats(ctx context.Context, userId uuid.UUID) ([]uuid.UUID, error) {
+func (m *messageService) GetChats(ctx context.Context, userId uuid.UUID) ([]uuid.UUID, error) {
 	return m.repo.GetChats(ctx, userId)
 }
 
-func (m *MessageServiceImpl) GetChatsExtended(ctx context.Context, userId uuid.UUID) ([]ChatFullInfo, error) {
+func (m *messageService) GetChatsExtended(ctx context.Context, userId uuid.UUID) ([]ChatFullInfo, error) {
 	return m.repo.GetChatsExtended(ctx, userId)
 }
 
-func (m *MessageServiceImpl) GetChatInfo(ctx context.Context, chatId uuid.UUID) (*ChatInfo, error) {
+func (m *messageService) GetChatInfo(ctx context.Context, chatId uuid.UUID) (*ChatInfo, error) {
 	return m.repo.GetChatInfo(ctx, chatId)
 }
 
-func (m *MessageServiceImpl) GetChatHistory(ctx context.Context, chatId uuid.UUID, fromUserId, fromMsgId uuid.UUID, q int) ([]Message, error) {
+func (m *messageService) GetChatHistory(ctx context.Context, chatId uuid.UUID, fromUserId, fromMsgId uuid.UUID, q int) ([]Message, error) {
 	err := m.checkQ(q)
 	if err != nil {
 		return []Message{}, err
@@ -131,11 +113,11 @@ func (m *MessageServiceImpl) GetChatHistory(ctx context.Context, chatId uuid.UUI
 	return m.repo.GetChatHistory(ctx, chatId, fromMsgId, q)
 }
 
-func (m *MessageServiceImpl) GetSupportedReactions(ctx context.Context) ([]string, error) {
+func (m *messageService) GetSupportedReactions(ctx context.Context) ([]string, error) {
 	return m.repo.GetEmojis(ctx)
 }
 
-func (m *MessageServiceImpl) PostReaction(ctx context.Context, userId, chatId, msgId uuid.UUID, emoji string) error {
+func (m *messageService) PostReaction(ctx context.Context, userId, chatId, msgId uuid.UUID, emoji string) error {
 	err := m.repo.NewReaction(ctx, userId, chatId, msgId, emoji)
 	if err != nil {
 		return err
@@ -144,7 +126,7 @@ func (m *MessageServiceImpl) PostReaction(ctx context.Context, userId, chatId, m
 	return nil
 }
 
-func (m *MessageServiceImpl) DelReaction(ctx context.Context, userId, chatId, msgId uuid.UUID, emoji string) error {
+func (m *messageService) DelReaction(ctx context.Context, userId, chatId, msgId uuid.UUID, emoji string) error {
 	err := m.repo.DelReaction(ctx, userId, chatId, msgId, emoji)
 	if err != nil {
 		return err

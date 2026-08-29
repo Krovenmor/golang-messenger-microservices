@@ -68,6 +68,70 @@
 ```
 
 
+
+# **Profile API:**
+**All endpoints works only with JWT token from Auth API**  
+**Usage: Authorization -> Bearer Token -> Access token from AuthApi**  
+
+## **"POST /api/profile"** - creates a new profile  
+### Request body:  
+```json
+{  
+    "name": "Your Public Name",
+    "userName": "Your Unique UserName",  
+    "pubKey": "Public key",  
+    "encryptedPrvKey": "Encrypted Private Key",  
+    "kdfSalt": "KDF Salt",
+    "keyNonce": "Your nonce"
+}  
+```
+
+## **"GET /api/profile"** - get yours profile
+### Response body  
+```json
+{  
+    "userId": "UUID of profile",
+    "name": "Name",
+    "userName": "User Name",  
+    "pubKey": "Public key",  
+    "encryptedPrvKey": "Encrypted Private Key",  
+    "kdfSalt": "KDF Salt",
+    "keyNonce": "Your nonce",
+    "createdAt": "time, example: '2026-07-28T19:56:51.855208Z'",
+
+    // Additional Info, {} if no additional info
+    "additional": {
+        // [] if no avatars
+        "avatars": ["UUID from Media Api", ...]
+    }
+}  
+```
+
+## **"GET /api/profile/{target}"** - get other profile  
+{target} - UserId (UUID) or UserName  
+### Response body  
+```json
+{  
+    "userId": "UUID of profile",  
+    "name": "Name",  
+    "userName": "User Name",  
+    "pubKey": "Public key",
+    "createdAt": "time, example: '2026-07-28T19:56:51.855208Z'",
+
+    "additional": {
+        "avatars": ["UUID from Media Api", ...]
+    }
+}  
+```
+
+## **"POST /api/msg/profile/avatar/{uuid}"** - add new avatar to your profile
+- uuid - Your photoId from Media API
+
+## **"DELETE /api/msg/profile/avatar/{uuid}"** - del avatar from your profile
+- uuid - Your photoId from Media API
+
+
+
 # **Message API:**
 **All endpoints works only with JWT token from Auth API**  
 **Usage: Authorization -> Bearer Token -> Access token from AuthApi**  
@@ -105,64 +169,7 @@
 }
 ```
 
-## **"POST /api/msg/profile"** - creates a new profile  
-### Request body:  
-```json
-{  
-    "name": "Your Public Name",
-    "userName": "Your Unique UserName",  
-    "pubKey": "Public key",  
-    "encryptedPrvKey": "Encrypted Private Key",  
-    "kdfSalt": "KDF Salt",
-    "keyNonce": "Your nonce"
-}  
-```
-
-## **"GET /api/msg/profile"** - get yours profile
-### Response body  
-```json
-{  
-    "userId": "UUID of profile",
-    "name": "Name",
-    "userName": "User Name",  
-    "pubKey": "Public key",  
-    "encryptedPrvKey": "Encrypted Private Key",  
-    "kdfSalt": "KDF Salt",
-    "keyNonce": "Your nonce",
-    "createdAt": "time, example: '2026-07-28T19:56:51.855208Z'",
-
-    // Additional Info, {} if no additional info
-    "additional": {
-        // [] if no avatars
-        "avatars": ["UUID from Media Api", ...]
-    }
-}  
-```
-
-## **"GET /api/msg/profile/{target}"** - get other profile  
-{target} - UserId (UUID) or UserName  
-### Response body  
-```json
-{  
-    "userId": "UUID of profile",  
-    "name": "Name",  
-    "userName": "User Name",  
-    "pubKey": "Public key",
-    "createdAt": "time, example: '2026-07-28T19:56:51.855208Z'",
-
-    "additional": {
-        "avatars": ["UUID from Media Api", ...]
-    }
-}  
-```
-
-## **"POST /api/msg/profile/avatar/{uuid}"** - add new avatar to your profile
-- uuid - Your photoId from Media API
-
-## **"DELETE /api/msg/profile/avatar/{uuid}"** - del avatar from your profile
-- uuid - Your photoId from Media API
-
-## **"GET /api/msg/profile/chats"** - get all your chats  
+## **"GET /api/msg/chats"** - get all your chats  
 ### Response body  
 ```json
 [  
@@ -170,7 +177,7 @@
 ]  
 ```
 
-## **"GET /api/msg/profile/chats/full"** - get all your chats with extended info  
+## **"GET /api/msg/chats/full"** - get all your chats with extended info  
 ### Response body  
 ```json
 [
@@ -287,6 +294,7 @@ Request:
 
 ## **"DELETE /api/msg/chat/{ChatId}/message/{MessageId}/reaction/{emoji}"** - del a reaction on message
 - {emoji} - real emoji, example: /reaction/🔥
+
 
 
 # **WebSocket API:**  
@@ -452,6 +460,8 @@ Statuses:
 
 LastSeen - Unix time  
 If LastSeen = 0 then profile not exists or was online a very long time ago  
+
+
 
 # **Media API:**
 ## - "GET /api/media/profile" - get info

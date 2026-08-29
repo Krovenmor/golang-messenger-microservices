@@ -4,6 +4,8 @@ type RedisConfig struct {
 	Address  string
 	Password string
 	DB       int
+
+	StreamsMaxLen int64
 }
 
 type RedisChannelsConfig struct {
@@ -15,6 +17,8 @@ type RedisChannelsConfig struct {
 	UserVerificationChannel string
 
 	ChatEventsPattern string
+
+	ProfileStream string
 }
 
 func GetRedisConfig() (*RedisConfig, error) {
@@ -24,6 +28,8 @@ func GetRedisConfig() (*RedisConfig, error) {
 		Address:  r.GetString("REDIS_ADDRESS"),
 		Password: r.GetString("REDIS_PASSWORD"),
 		DB:       r.GetInt("REDIS_DB"),
+
+		StreamsMaxLen: int64(r.GetInt("REDIS_STREAMS_MAX_LEN")),
 	}
 
 	if r.err != nil {
@@ -45,6 +51,8 @@ func GetRedisChannelsConfig() (*RedisChannelsConfig, error) {
 		UserVerificationChannel: r.GetString("REDIS_USER_VERIFICATION_CHANNEL"),
 
 		ChatEventsPattern: r.GetString("REDIS_CHAT_EVENTS_PATTERN"),
+
+		ProfileStream: r.GetString("REDIS_PROFILE_STREAM"),
 	}
 
 	if r.err != nil {

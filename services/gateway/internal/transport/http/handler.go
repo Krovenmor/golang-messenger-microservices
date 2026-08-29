@@ -45,6 +45,7 @@ func (h *MainHandler) RegisterRoutes(m *http.ServeMux) (http.Handler, error) {
 	wsProxy := getParsed(h.conf.WsServiceURL)
 	statProxy := getParsed(h.conf.StatusServiceURL)
 	mediaProxy := getParsed(h.conf.MediaServiceURL)
+	profileProxy := getParsed(h.conf.ProfileServiceURL)
 
 	if err != nil {
 		return nil, err
@@ -53,6 +54,7 @@ func (h *MainHandler) RegisterRoutes(m *http.ServeMux) (http.Handler, error) {
 	protected("/api/msg/", msgProxy)
 	protected("/api/status/", statProxy)
 	protected("/api/media/", mediaProxy)
+	protected("/api/profile/", profileProxy)
 
 	m.Handle("/api/ws", h.middleware.QueryParamMiddleware(wsProxy, "token"))
 	m.Handle("/api/auth/", h.middleware.LimitMiddleware(authProxy))

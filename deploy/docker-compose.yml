@@ -67,6 +67,22 @@ services:
       interval: 3s
       timeout: 3s
       retries: 5
+
+  profile-db:
+    image: postgres:latest
+    environment:
+      - POSTGRES_DB=profile_db
+      - POSTGRES_USER=profile_user
+      - POSTGRES_PASSWORD=profile_pass
+    volumes:
+      - profile_db_data:/var/lib/data
+    ports:
+      - "5428:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U profile_user -d profile_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
   
   #
   # Services
@@ -155,6 +171,20 @@ services:
     volumes:
       - ../certs/jwt/public.key:/app/certs/jwt/public.key:ro
       - ../data:/var/data
+  
+  profile-service:
+    build: 
+      context: ..
+      dockerfile: services/profile/Dockerfile
+    env_file:
+      - ../config/common.env
+      - ../config/redis_channels.env
+      - ../config/profile.env
+    depends_on:
+      profile-db:
+        condition: service_healthy
+    volumes:
+      - ../certs/jwt/public.key:/app/certs/jwt/public.key:ro
 
   #
   # GateWay for all services
@@ -200,3 +230,4 @@ volumes:
   msg_db_data:
   redis_data:
   media_db_data:
+  profile_db_data:
