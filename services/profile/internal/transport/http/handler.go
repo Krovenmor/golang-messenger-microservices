@@ -31,6 +31,7 @@ func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {
 	protected("POST"+profilePath, h.NewProfile)
 	protected("GET"+profilePath, h.GetProfilePrivate)
 	protected("GET"+profilePath+targetPath, h.GetProfilePublic)
+	protected("POST"+profilePath+"/batch", h.GetProfilesPublicBatch)
 
 	protected("POST"+profilePath+"/avatar"+targetPath, h.PostAvatar)
 	protected("DELETE"+profilePath+"/avatar"+targetPath, h.DelAvatar)

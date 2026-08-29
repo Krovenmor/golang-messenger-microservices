@@ -1,6 +1,7 @@
 package http
 
 import (
+	"MyMessenger/pkg/utils"
 	"MyMessenger/services/profile/internal/service"
 
 	"github.com/google/uuid"
@@ -32,8 +33,8 @@ func ToPrivateProfileBody(p *service.Profile) *PrivateProfileResponseBody {
 	}
 }
 
-func ToPublicProfileBody(p *service.Profile) *PublicProfileResponseBody {
-	return &PublicProfileResponseBody{
+func ToPublicProfileBody(p service.Profile) PublicProfileResponseBody {
+	return PublicProfileResponseBody{
 		UserId:     p.UserId,
 		Name:       p.Name,
 		UserName:   p.UserName,
@@ -41,4 +42,8 @@ func ToPublicProfileBody(p *service.Profile) *PublicProfileResponseBody {
 		CreatedAt:  p.CreatedAt,
 		Additional: p.Additional,
 	}
+}
+
+func ToPublicProfileBodies(p []service.Profile) []PublicProfileResponseBody {
+	return utils.MapSlice(p, ToPublicProfileBody)
 }

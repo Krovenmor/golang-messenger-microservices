@@ -87,7 +87,7 @@
 ```
 
 ## **"GET /api/profile"** - get yours profile
-### Response body  
+### Response body (PRIVATE RESPONSE)  
 ```json
 {  
     "userId": "UUID of profile",
@@ -109,7 +109,7 @@
 
 ## **"GET /api/profile/{target}"** - get other profile  
 {target} - UserId (UUID) or UserName  
-### Response body  
+### Response body (PUBLIC RESPONSE)  
 ```json
 {  
     "userId": "UUID of profile",  
@@ -124,10 +124,25 @@
 }  
 ```
 
-## **"POST /api/msg/profile/avatar/{uuid}"** - add new avatar to your profile
+## **"POST /api/profile/batch"** - get other profiles  
+- limits: from 1 to 50
+### Request body:  
+```json
+{  
+    "profiles": ["UUID_1", "UUID_2", ...]
+}  
+```
+### Response body  
+```json
+[  
+    PUBLIC_RESPONSE_1, PUBLIC_RESPONSE_2, ... 
+]  
+```
+
+## **"POST /api/profile/avatar/{uuid}"** - add new avatar to your profile
 - uuid - Your photoId from Media API
 
-## **"DELETE /api/msg/profile/avatar/{uuid}"** - del avatar from your profile
+## **"DELETE /api/profile/avatar/{uuid}"** - del avatar from your profile
 - uuid - Your photoId from Media API
 
 

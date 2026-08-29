@@ -69,7 +69,22 @@ func (h *Handler) GetProfilePublic(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Trouble with getting profile", http.StatusInternalServerError)
 		return
 	}
-	utils.Send(w, ToPublicProfileBody(profile))
+	body := ToPublicProfileBody(*profile)
+	utils.Send(w, &body)
+}
+
+func (h *Handler) GetProfilesPublicBatch(w http.ResponseWriter, r *http.Request) {
+	ids, err := recv[GetProfilesBatchRequestBody](w, r)
+	if err != nil {
+		return
+	}
+	profiles, err := h.msg.GetProfilesById(r.Context(), ids.Profiles)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	bodies := ToPublicProfileBodies(profiles)
+	utils.Send(w, &bodies)
 }
 
 func (h *Handler) PostAvatar(w http.ResponseWriter, r *http.Request) {

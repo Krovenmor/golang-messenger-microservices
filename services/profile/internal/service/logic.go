@@ -37,6 +37,10 @@ func (s *profileService) GetProfileById(ctx context.Context, userId uuid.UUID) (
 	return s.repo.GetProfileById(ctx, userId)
 }
 
+func (s *profileService) GetProfilesById(ctx context.Context, userIds []uuid.UUID) ([]Profile, error) {
+	return s.repo.GetProfilesById(ctx, userIds)
+}
+
 func (s *profileService) GetProfileByUserName(ctx context.Context, username string) (*Profile, error) {
 	return s.repo.GetProfileByUserName(ctx, username)
 }

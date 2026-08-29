@@ -1,12 +1,15 @@
 package postgres
 
 import (
+	"MyMessenger/pkg/repo"
 	"MyMessenger/services/profile/internal/infra/postgres/queries"
 	"MyMessenger/services/profile/internal/service"
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -77,6 +80,17 @@ func getProfileByVal[T any](ctx context.Context, pool *pgxpool.Pool, query strin
 
 func (r *PostagreRepo) GetProfileById(ctx context.Context, userId uuid.UUID) (*service.Profile, error) {
 	return getProfileByVal(ctx, r.pool, r.q.GetProfileId, userId)
+}
+
+func (r *PostagreRepo) GetProfilesById(ctx context.Context, userIds []uuid.UUID) ([]service.Profile, error) {
+	sl, err := repo.GetSliceQueryByPos[service.Profile](ctx, r.pool, r.q.GetProfilesId, userIds)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return []service.Profile{}, nil
+		}
+		return sl, getErrorMsg(err)
+	}
+	return sl, nil
 }
 
 func (r *PostagreRepo) GetProfileByUserName(ctx context.Context, username string) (*service.Profile, error) {

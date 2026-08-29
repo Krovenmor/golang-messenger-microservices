@@ -14,6 +14,7 @@ type Queries struct {
 
 	GetProfileUserName string
 	GetProfileId       string
+	GetProfilesId      string
 
 	AddAvatarPhoto string
 	DelAvatarPhoto string
@@ -27,6 +28,7 @@ func GetQueries() (*Queries, error) {
 		DelProfile: r.GetQuery("del_profile"),
 
 		GetProfileId:       r.GetQuery("get_profile_id"),
+		GetProfilesId:      r.GetQuery("get_profiles_id"),
 		GetProfileUserName: r.GetQuery("get_profile_username"),
 
 		AddAvatarPhoto: r.GetQuery("add_avatar_photo"),

@@ -36,6 +36,7 @@ func setupProfileValidation(r *config.ConfigValidator) {
 	r.SetLenBase64Alias("profile_salt", "PROFILE_SALT_LEN")
 	r.SetLenBase64Alias("profile_nonce", "PROFILE_NONCE_LEN")
 
+	r.SetRangesAliasBasic("profiles_batch_ids", "BATCH_IDS_MIN", "BATCH_IDS_MAX", "")
 }
 
 func SetupValidator() error {
