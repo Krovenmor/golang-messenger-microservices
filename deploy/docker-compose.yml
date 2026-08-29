@@ -164,6 +164,7 @@ services:
       dockerfile: services/media/Dockerfile
     env_file:
       - ../config/common.env
+      - ../config/redis_channels.env
       - ../config/media.env
     depends_on:
       media-db:

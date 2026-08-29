@@ -7,6 +7,8 @@ import (
 )
 
 type MediaRepo interface {
+	NewProfile(ctx context.Context, userId uuid.UUID) error
+
 	AddNewMedia(ctx context.Context, userId uuid.UUID, info *MediaInfo) error
 	GetAvailableSpace(ctx context.Context, userId uuid.UUID) (int64, error)
 	DelMedia(ctx context.Context, userId, mediaId uuid.UUID) error

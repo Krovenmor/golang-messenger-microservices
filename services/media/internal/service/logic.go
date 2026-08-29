@@ -84,6 +84,10 @@ func (s *mediaSaver) getSpace(ctx context.Context, userId uuid.UUID) (int64, err
 	return space, nil
 }
 
+func (s *mediaSaver) NewProfile(ctx context.Context, userId uuid.UUID) error {
+	return s.repo.NewProfile(ctx, userId)
+}
+
 func (s *mediaSaver) SaveAvatar(ctx context.Context, userId uuid.UUID, img image.Image) (uuid.UUID, error) {
 	photoId, err := uuid.NewV7()
 	if err != nil {
