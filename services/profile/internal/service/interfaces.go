@@ -16,6 +16,9 @@ type ProfileRepo interface {
 
 	AddAvatarToProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error
 	DelAvatarFromProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error
+
+	UpdateName(ctx context.Context, userId uuid.UUID, name string) error
+	UpdateBio(ctx context.Context, userId uuid.UUID, bio string) error
 }
 
 type ProfilePublisher interface {

@@ -28,6 +28,7 @@ func GetModule() fx.Option {
 			stdconfig.GetRepoConfig,
 			stdconfig.GetServConfig,
 			stdconfig.GetRedisChannelsConfig,
+			config.GetProfileConfig,
 		),
 
 		// Validator

@@ -24,6 +24,14 @@ type GetProfilesBatchRequestBody struct {
 	Profiles []uuid.UUID `json:"profiles" validate:"profiles_batch_ids"`
 }
 
+type ChangeNameRequestBody struct {
+	Name string `json:"name" validate:"profile_name"`
+}
+
+type ChangeBioRequestBody struct {
+	Bio string `json:"bio" validate:"profile_bio"`
+}
+
 //
 // Responses
 //

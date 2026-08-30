@@ -126,3 +126,41 @@ func (h *Handler) DelAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 }
+
+func (h *Handler) ChangeName(w http.ResponseWriter, r *http.Request) {
+	name, err := recv[ChangeNameRequestBody](w, r)
+	if err != nil {
+		return
+	}
+	userId, err := utils.GetUuidFromContext(r)
+	if err != nil {
+		log.Printf("ChangeName: trouble with GetUuidFromContext, err: %q", err)
+		http.Error(w, "Internal", http.StatusInternalServerError)
+		return
+	}
+	err = h.msg.ChangeProfileName(r.Context(), userId, name.Name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) ChangeBio(w http.ResponseWriter, r *http.Request) {
+	bio, err := recv[ChangeBioRequestBody](w, r)
+	if err != nil {
+		return
+	}
+	userId, err := utils.GetUuidFromContext(r)
+	if err != nil {
+		log.Printf("ChangeName: trouble with GetUuidFromContext, err: %q", err)
+		http.Error(w, "Internal", http.StatusInternalServerError)
+		return
+	}
+	err = h.msg.ChangeProfileBio(r.Context(), userId, bio.Bio)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}

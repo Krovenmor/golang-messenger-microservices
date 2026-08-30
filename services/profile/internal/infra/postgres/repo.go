@@ -49,33 +49,7 @@ func (r *PostagreRepo) NewProfile(ctx context.Context, profile *service.Profile)
 }
 
 func (r *PostagreRepo) DelProfile(ctx context.Context, profileId uuid.UUID) error {
-	t, err := r.pool.Exec(ctx, r.q.DelProfile, profileId)
-	if err != nil {
-		return getErrorMsg(err)
-	}
-	if t.RowsAffected() == 0 {
-		return service.ErrNotFound
-	}
-	return nil
-}
-
-func getProfileByVal[T any](ctx context.Context, pool *pgxpool.Pool, query string, val T) (*service.Profile, error) {
-	var profile service.Profile
-	err := pool.QueryRow(ctx, query, val).Scan(
-		&profile.UserId,
-		&profile.Name,
-		&profile.UserName,
-		&profile.PublicKey,
-		&profile.PrivateKey,
-		&profile.KDFSalt,
-		&profile.KeyNonce,
-		&profile.CreatedAt,
-		&profile.Additional,
-	)
-	if err != nil {
-		return nil, getErrorMsg(err)
-	}
-	return &profile, nil
+	return defExec(ctx, r.pool, r.q.DelProfile, profileId)
 }
 
 func (r *PostagreRepo) GetProfileById(ctx context.Context, userId uuid.UUID) (*service.Profile, error) {
@@ -98,23 +72,17 @@ func (r *PostagreRepo) GetProfileByUserName(ctx context.Context, username string
 }
 
 func (r *PostagreRepo) AddAvatarToProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error {
-	t, err := r.pool.Exec(ctx, r.q.AddAvatarPhoto, userId, avatarId.String())
-	if err != nil {
-		return getErrorMsg(err)
-	}
-	if t.RowsAffected() == 0 {
-		return service.ErrNotFound
-	}
-	return nil
+	return defExec(ctx, r.pool, r.q.AddAvatarPhoto, userId, avatarId.String())
 }
 
 func (r *PostagreRepo) DelAvatarFromProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error {
-	t, err := r.pool.Exec(ctx, r.q.DelAvatarPhoto, userId, avatarId.String())
-	if err != nil {
-		return getErrorMsg(err)
-	}
-	if t.RowsAffected() == 0 {
-		return service.ErrNotFound
-	}
-	return nil
+	return defExec(ctx, r.pool, r.q.DelAvatarPhoto, userId, avatarId.String())
+}
+
+func (r *PostagreRepo) UpdateBio(ctx context.Context, userId uuid.UUID, bio string) error {
+	return defExec(ctx, r.pool, r.q.UpdateBio, userId, bio)
+}
+
+func (r *PostagreRepo) UpdateName(ctx context.Context, userId uuid.UUID, name string) error {
+	return defExec(ctx, r.pool, r.q.UpdateName, userId, name)
 }

@@ -18,6 +18,9 @@ type Queries struct {
 
 	AddAvatarPhoto string
 	DelAvatarPhoto string
+
+	UpdateBio  string
+	UpdateName string
 }
 
 func GetQueries() (*Queries, error) {
@@ -33,6 +36,9 @@ func GetQueries() (*Queries, error) {
 
 		AddAvatarPhoto: r.GetQuery("add_avatar_photo"),
 		DelAvatarPhoto: r.GetQuery("del_avatar_photo"),
+
+		UpdateBio:  r.GetQuery("update_bio"),
+		UpdateName: r.GetQuery("update_name"),
 	}
 
 	return &queries, r.Err()

@@ -15,4 +15,7 @@ type ProfileService interface {
 
 	AddAvatarToProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error
 	DelAvatarFromProfile(ctx context.Context, userId uuid.UUID, avatarId uuid.UUID) error
+
+	ChangeProfileName(ctx context.Context, userId uuid.UUID, name string) error
+	ChangeProfileBio(ctx context.Context, userId uuid.UUID, bio string) error
 }

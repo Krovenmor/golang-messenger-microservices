@@ -102,7 +102,9 @@
     // Additional Info, {} if no additional info
     "additional": {
         // [] if no avatars
-        "avatars": ["UUID from Media Api", ...]
+        "avatars": ["UUID from Media Api", ...],
+        // "" if no bio
+        "bio": ""
     }
 }  
 ```
@@ -118,9 +120,8 @@
     "pubKey": "Public key",
     "createdAt": "time, example: '2026-07-28T19:56:51.855208Z'",
 
-    "additional": {
-        "avatars": ["UUID from Media Api", ...]
-    }
+    // Like in PRIVATE
+    "additional": {}
 }  
 ```
 
@@ -145,6 +146,21 @@
 ## **"DELETE /api/profile/avatar/{uuid}"** - del avatar from your profile
 - uuid - Your photoId from Media API
 
+## **"PUT /api/profile/name"** - change your public name
+### Request body:  
+```json
+{   
+    "name": "Your new public Name",
+} 
+```
+
+## **"PUT /api/profile/bio"** - add/change bio
+### Request body:  
+```json
+{   
+    "bio": "Your new bio",
+} 
+```
 
 
 # **Message API:**
@@ -200,8 +216,7 @@
         "chatId": "UUID",
         "members": [
             {
-                "userId": "UUID", 
-                "name": "Name",
+                "userId": "UUID",  
                 "joinedAt": "Time"
             }, ...
         ]
@@ -262,8 +277,7 @@ Query params:
     "createdAt": "Time when it was created",
     "members": [
         {
-            "userId": "UUID", 
-            "name": "Name",
+            "userId": "UUID",  
             "joinedAt": "Time"
         }, ...
     ]

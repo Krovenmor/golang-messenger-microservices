@@ -7,4 +7,6 @@ var (
 	ErrUnknown       = errors.New("unknown")
 	ErrInternal      = errors.New("internal")
 	ErrAlreadyExists = errors.New("already exists")
+
+	ErrBadData = errors.New("bad data")
 )
