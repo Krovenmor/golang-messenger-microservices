@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -57,6 +58,7 @@ func (h *Handler) GetProfilePublic(w http.ResponseWriter, r *http.Request) {
 	var profile *service.Profile
 	userId, err := uuid.Parse(userName)
 	if err != nil {
+		userName = strings.ToLower(userName)
 		profile, err = h.msg.GetProfileByUserName(r.Context(), userName)
 	} else {
 		profile, err = h.msg.GetProfileById(r.Context(), userId)
