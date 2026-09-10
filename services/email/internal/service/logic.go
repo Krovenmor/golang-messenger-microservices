@@ -25,7 +25,7 @@ func (s *TmpEmailSender) SendVerificationCode(ctx context.Context, email, code s
 	m.SetHeader("From", s.conf.FromEmail)
 	m.SetHeader("To", email)
 	m.SetHeader("Subject", "Yout verification code: "+code)
-	m.SetBody("text/plain", "For Signalline registration")
+	m.SetBody("text/plain", "For Signaline registration")
 
 	err := s.dial.DialAndSend(m)
 	if err != nil {

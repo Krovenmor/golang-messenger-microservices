@@ -4,7 +4,6 @@ import (
 	"MyMessenger/services/msg/internal/config"
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/google/uuid"
 )
@@ -51,7 +50,6 @@ func (m *messageService) CreateNewChat(ctx context.Context, fUser, sUser uuid.UU
 func (m *messageService) PostMessage(ctx context.Context, chatId uuid.UUID, msg ToPostMessage) (uuid.UUID, error) {
 	msgId, err := uuid.NewV7()
 	if err != nil {
-		log.Printf("trouble with gen UUID for new message: %w", err)
 		return uuid.Nil, ErrInternal
 	}
 	rMsg := Message{
