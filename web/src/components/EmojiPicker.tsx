@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EMOJI_CATEGORIES } from '../data/emojis'
 
-const RECENT_KEY = 'signalline.recentEmojis'
+const RECENT_KEY = 'signaline.recentEmojis'
 const MAX_RECENT = 32
 
 function loadRecent(): string[] {
@@ -16,9 +16,7 @@ function loadRecent(): string[] {
 function saveRecent(list: string[]) {
   try {
     localStorage.setItem(RECENT_KEY, JSON.stringify(list))
-  } catch {
-    // ignore — not critical if it doesn't persist
-  }
+  } catch {}
 }
 
 interface Props {
@@ -77,7 +75,7 @@ export function EmojiPicker({ onSelect, onClose }: Props) {
   return (
     <div
       ref={panelRef}
-      className="absolute bottom-full left-0 z-30 mb-2 flex h-[22rem] w-[19rem] max-w-[calc(100vw-2rem)] animate-rise flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl shadow-black/40"
+      className="absolute bottom-full left-0 z-30 mb-2 flex h-[22rem] max-h-[calc(var(--app-height,100vh)_-_9rem)] w-[19rem] max-w-[calc(100vw_-_2rem)] animate-rise flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl shadow-black/40"
     >
       <div className="border-b border-line p-2">
         <input

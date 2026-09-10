@@ -1,7 +1,3 @@
-// Every UUID gets a stable hue derived from its own bytes, so each person's
-// messages carry a consistent "fingerprint" color across the whole app —
-// no lookups, no palette table, just the id itself.
-
 export function fingerprintHue(id: string): number {
   let hash = 0
   for (let i = 0; i < id.length; i++) {
@@ -34,4 +30,15 @@ export function formatDay(iso: string | null): string {
   const isToday = d.toDateString() === today.toDateString()
   if (isToday) return 'сегодня'
   return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' })
+}
+
+export function formatExactDateTime(date: Date | null): string {
+  if (!date || Number.isNaN(date.getTime())) return ''
+  return date.toLocaleString(undefined, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }

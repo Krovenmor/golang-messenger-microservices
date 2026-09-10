@@ -1,12 +1,29 @@
 import type { AuthTokens } from '../types'
 
-const ACCESS_KEY = 'signalline.accessToken'
-const REFRESH_KEY = 'signalline.refreshToken'
+const ACCESS_KEY = 'signaline.accessToken'
+const REFRESH_KEY = 'signaline.refreshToken'
+
+const RENAMED_FROM: Record<string, string> = {
+  [ACCESS_KEY]: 'signalline.accessToken',
+  [REFRESH_KEY]: 'signalline.refreshToken',
+}
+
+function readAdoptingPreviousName(key: string): string | null {
+  const current = localStorage.getItem(key)
+  if (current) return current
+
+  const previous = localStorage.getItem(RENAMED_FROM[key])
+  if (!previous) return null
+
+  localStorage.setItem(key, previous)
+  localStorage.removeItem(RENAMED_FROM[key])
+  return previous
+}
 
 export const tokenStorage = {
   get(): AuthTokens | null {
-    const accessToken = localStorage.getItem(ACCESS_KEY)
-    const refreshToken = localStorage.getItem(REFRESH_KEY)
+    const accessToken = readAdoptingPreviousName(ACCESS_KEY)
+    const refreshToken = readAdoptingPreviousName(REFRESH_KEY)
     if (!accessToken || !refreshToken) return null
     return { accessToken, refreshToken }
   },
@@ -17,5 +34,7 @@ export const tokenStorage = {
   clear() {
     localStorage.removeItem(ACCESS_KEY)
     localStorage.removeItem(REFRESH_KEY)
+    localStorage.removeItem(RENAMED_FROM[ACCESS_KEY])
+    localStorage.removeItem(RENAMED_FROM[REFRESH_KEY])
   },
 }

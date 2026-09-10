@@ -1,15 +1,3 @@
-// Profile key management: an ECDH P-256 keypair per user. The public key is
-// shared with everyone (needed to encrypt messages TO this user); the
-// private key never leaves the browser in plaintext — it's encrypted with a
-// key derived from the user's password (PBKDF2) before being sent to the
-// server, and only ever lives unwrapped in memory (see cryptoStore.ts).
-//
-// `crypto.subtle` only exists in secure contexts (HTTPS or localhost) — on
-// plain http:// (e.g. hitting the box over the LAN by IP) it's simply
-// undefined in every browser, no client-side workaround exists. In that
-// case we fall back to random placeholder values so the app doesn't hang or
-// crash, but real end-to-end encryption is only possible over https.
-
 function randomBytes(n: number): Uint8Array {
   const arr = new Uint8Array(n)
   if (crypto?.getRandomValues) {
@@ -64,10 +52,6 @@ export interface GeneratedProfileKeys {
   privateKey: CryptoKey
 }
 
-/** Generates a fresh ECDH P-256 keypair for a new profile, encrypting the
- * private key with a key derived from `password`. Returns both the
- * server-bound material and the live CryptoKey, so the caller can keep the
- * key unlocked in memory for this session without a decrypt round-trip. */
 export async function generateProfileKeys(password: string): Promise<GeneratedProfileKeys> {
   if (!hasRealCrypto()) {
     return {
@@ -86,9 +70,6 @@ export async function generateProfileKeys(password: string): Promise<GeneratedPr
     'deriveBits',
   ])
 
-  // Raw (uncompressed point) format: 65 bytes for P-256 — this is what the
-  // rest of the crypto scheme (ephemeral keys, ECDH imports) uses too, so
-  // every public key in the system is encoded the same way.
   const pubRaw = await crypto.subtle.exportKey('raw', keyPair.publicKey)
   const prvPkcs8 = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey)
 
@@ -97,12 +78,6 @@ export async function generateProfileKeys(password: string): Promise<GeneratedPr
   const wrappingKey = await deriveWrappingKey(password, salt)
   const encryptedPrv = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, wrappingKey, prvPkcs8)
 
-  // The extractable keyPair.privateKey above only ever existed to produce
-  // the pkcs8 bytes we just encrypted for upload — re-import a
-  // non-extractable copy from those same bytes for actual use. This is the
-  // copy that ends up in cryptoStore and (optionally) IndexedDB; its raw
-  // bytes can never be pulled back out via exportKey, from this tab or a
-  // future one reading it back from storage.
   const nonExtractablePrivateKey = await crypto.subtle.importKey(
     'pkcs8',
     prvPkcs8,
@@ -122,9 +97,6 @@ export async function generateProfileKeys(password: string): Promise<GeneratedPr
   }
 }
 
-/** Decrypts a profile's stored private key with the user's password —
- * used when logging back in on a session that doesn't have the key in
- * memory yet. Throws if the password is wrong (AES-GCM auth tag failure). */
 export async function unlockPrivateKey(
   password: string,
   encryptedPrvKeyB64: string,

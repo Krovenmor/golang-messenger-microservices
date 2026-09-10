@@ -45,9 +45,12 @@ export function NewChatModal({ onClose, onCreated }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/60 px-4" onClick={onClose}>
+    <div
+      className="absolute inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/60 px-4 py-6 sm:items-center"
+      onClick={onClose}
+    >
       <div
-        className="w-full max-w-sm animate-rise rounded-2xl border border-line bg-surface p-6 shadow-2xl"
+        className="my-auto w-full max-w-sm animate-rise rounded-2xl border border-line bg-surface p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <p className="mb-1 font-mono text-xs uppercase tracking-[0.2em] text-signal">Новый диалог</p>

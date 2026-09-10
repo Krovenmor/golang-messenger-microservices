@@ -1,15 +1,3 @@
-// Per-message encryption. Every message gets its own random AES-256-GCM
-// MessageKey. That key is then sealed twice — once for the receiver, once
-// for the sender (so the sender can read their own history back) — using a
-// fresh ephemeral ECDH keypair per message:
-//
-//   sharedSecret = ECDH(ephemeralPriv, targetStaticPub)
-//   wrapKey      = HKDF-SHA256(sharedSecret)              -> AES-KW key
-//   sealed       = ephemeralPub(65B) || AES-KW(MessageKey)(40B)  = 105B
-//
-// `salt`/`info` for the HKDF step aren't specified by the backend (it never
-// looks inside these envelopes) — they only need to be consistent within
-// this frontend, so they're fixed constants below.
 import { bufToBase64, base64ToBuf } from './crypto'
 
 const HKDF_INFO = new TextEncoder().encode('signalline-message-key-wrap')
@@ -51,13 +39,6 @@ export interface EncryptedEnvelope {
   nonce: string
 }
 
-/** Encrypts `plaintext` for a 1:1 chat, producing the full envelope the
- * backend expects. Needs both parties' static public keys (raw, base64).
- * `chatId` is mixed in as AES-GCM additional authenticated data — it isn't
- * secret and isn't stored anywhere in the envelope, but decryption will
- * fail if the ciphertext is ever presented against a different chatId than
- * the one it was encrypted for, which rules out moving/replaying a message
- * from one chat into another. */
 export async function encryptMessage(
   plaintext: string,
   myPubKeyB64: string,
@@ -99,10 +80,6 @@ export async function encryptMessage(
   }
 }
 
-/** Unseals the MessageKey from a `senderKey`/`receiverKey` envelope (pick
- * whichever matches our role for that message) using our own static
- * private key, then decrypts `message` with it. `chatId` must be the chat
- * the message actually belongs to — see the AAD note on encryptMessage. */
 export async function decryptMessage(
   ciphertextB64: string,
   sealedKeyB64: string,

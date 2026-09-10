@@ -3,9 +3,7 @@ import { getAvatarUrl } from '../api/media'
 import { fingerprintColor, initials } from '../utils/identity'
 
 interface Props {
-  /** photoId of the active avatar, if any (e.g. profile.additional.avatars?.[0]). */
   avatarId?: string | null
-  /** Used to derive the fallback color and as alt text. */
   seed: string
   name: string
   className?: string
@@ -14,9 +12,6 @@ interface Props {
 export function Avatar({ avatarId, seed, name, className = '' }: Props) {
   const [errored, setErrored] = useState(false)
 
-  // Reset the error flag if we get handed a different (or new) avatar —
-  // otherwise switching from a broken photo to a working one would still
-  // show the fallback forever.
   useEffect(() => {
     setErrored(false)
   }, [avatarId])

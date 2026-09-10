@@ -21,8 +21,6 @@ class PresenceTracker {
 
     socketManager.onStatus((connected) => {
       if (!connected) return
-      // The server's "who am I tracking" list lives with the connection —
-      // after a reconnect we have to ask again for everyone we cared about.
       this.trackedUsers.forEach((userId) => socketManager.trackUser(userId))
     })
   }
@@ -31,14 +29,6 @@ class PresenceTracker {
     return this.statuses.get(userId) ?? null
   }
 
-  /**
-   * Starts live-tracking a user's status. The first subscriber for a given
-   * userId triggers a one-time `GET /api/status/{id}` (so the UI has a
-   * baseline immediately, not just "unknown" until their next status
-   * change) plus a `req:2` track subscription over the socket; everyone
-   * after that just rides the same cached value and push updates — no
-   * per-open-chat polling.
-   */
   subscribe(userId: string, cb: (status: StatusInfo | null) => void): () => void {
     this.bindWs()
 

@@ -1,10 +1,9 @@
 import { socketManager } from '../api/ws'
 import { ProfileStatus } from '../types'
 
-// Timings are ours to pick (nothing in the API dictates them):
-const AWAY_AFTER_MS = 60_000 // no activity for a minute -> Away
-const TYPING_HOLD_MS = 2_000 // 2s of continuous typing before announcing Typing
-const TYPING_STOP_MS = 3_000 // no keystroke for 3s -> stop announcing Typing
+const AWAY_AFTER_MS = 60_000
+const TYPING_HOLD_MS = 2_000
+const TYPING_STOP_MS = 3_000
 const IDLE_CHECK_INTERVAL_MS = 5_000
 
 class Presence {
@@ -32,9 +31,6 @@ class Presence {
     }
   }
 
-  /** Starts watching for activity — only meaningful while the socket is
-   * actually connected, so this is driven by socketManager's own status
-   * events rather than called directly from UI code. */
   start() {
     if (this.tracking) return
     this.tracking = true
@@ -66,12 +62,9 @@ class Presence {
     this.isTyping = false
   }
 
-  /** Call on every keystroke in the message composer. Only actually
-   * announces Typing once the user has been typing continuously for
-   * TYPING_HOLD_MS, so a single keystroke doesn't spam a status change. */
   notifyTyping() {
     if (!this.tracking) return
-    this.handleActivity() // typing counts as activity for the away-timer too
+    this.handleActivity()
 
     const now = Date.now()
     if (this.typingBurstStart === null) {
@@ -94,7 +87,6 @@ class Presence {
 
 export const presence = new Presence()
 
-// Presence only makes sense while there's a live connection to report over.
 socketManager.onStatus((connected) => {
   if (connected) {
     presence.start()

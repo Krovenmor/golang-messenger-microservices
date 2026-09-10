@@ -10,24 +10,8 @@ export interface NewProfilePayload {
   keyNonce: string
 }
 
-export interface UpdateProfileNamePayload {
-  name: string
-}
-
-export interface UpdateProfileBioPayload {
-  bio: string
-}
-
 export async function createProfile(payload: NewProfilePayload): Promise<void> {
   await apiClient.post('/profile', payload)
-}
-
-export async function updateProfileName(name: string): Promise<void> {
-  await apiClient.put('/profile/name', { name })
-}
-
-export async function updateProfileBio(bio: string): Promise<void> {
-  await apiClient.put('/profile/bio', { bio })
 }
 
 export async function getOwnProfile(): Promise<OwnProfile> {
@@ -40,12 +24,16 @@ export async function getProfile(target: string): Promise<PublicProfile> {
   return data
 }
 
+export async function updateProfileName(name: string): Promise<void> {
+  await apiClient.put('/profile/name', { name })
+}
+
+export async function updateProfileBio(bio: string): Promise<void> {
+  await apiClient.put('/profile/bio', { bio })
+}
+
 const BATCH_LIMIT = 50
 
-/** Fetches public profiles in bulk (backend caps a single call at 50) —
- * use this instead of N individual getProfile calls whenever several are
- * needed at once, e.g. resolving every peer in the chat list. Chunks
- * transparently if given more than the per-request limit. */
 export async function batchGetProfiles(userIds: string[]): Promise<PublicProfile[]> {
   if (userIds.length === 0) return []
   if (userIds.length <= BATCH_LIMIT) {
@@ -60,13 +48,10 @@ export async function batchGetProfiles(userIds: string[]): Promise<PublicProfile
   return results.flat()
 }
 
-/** Links an already-uploaded photo (see api/media.ts) to your profile as an avatar. */
 export async function addProfileAvatar(photoId: string): Promise<void> {
   await apiClient.post(`/profile/avatar/${photoId}`)
 }
 
-/** Unlinks an avatar from your profile — does NOT delete the underlying
- * file from media storage, see api/media.ts's deleteAvatarFile for that. */
 export async function removeProfileAvatar(photoId: string): Promise<void> {
   await apiClient.delete(`/profile/avatar/${photoId}`)
 }

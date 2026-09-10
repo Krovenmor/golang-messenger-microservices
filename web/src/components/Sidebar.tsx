@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ChatSummary, OwnProfile } from '../types'
 import { formatDay } from '../utils/identity'
 import { useDecryptedText } from '../utils/useDecryptedText'
-import { usePublicProfile } from '../api/profileCache'
+import { usePublicProfile, getCachedProfileSync } from '../api/profileCache'
 import { SignalDot } from './SignalDot'
 import { Avatar } from './Avatar'
 
@@ -35,9 +35,8 @@ function ChatRow({
 }) {
   const peer = peerOf(chat, ownUserId)
   const peerProfile = usePublicProfile(peer?.userId ?? null)
+  const peerName = peerProfile?.name ?? '…'
   const last = chat.lastMessage
-  // Called unconditionally regardless of whether `last` exists/is deleted —
-  // the hook itself already handles null/deleted messages internally.
   const decrypted = useDecryptedText(last, ownUserId, chat.chatId)
   const isOwn = !!ownUserId && last?.senderId === ownUserId
 
@@ -74,12 +73,12 @@ function ChatRow({
       <Avatar
         avatarId={peerProfile?.additional?.avatars?.[0]}
         seed={peer?.userId ?? chat.chatId}
-        name={peerProfile?.name ?? '? ?'}
+        name={peerName}
         className="h-10 w-10 text-sm"
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-medium text-ink">{peerProfile?.name ?? 'без имени'}</p>
+          <p className="truncate text-sm font-medium text-ink">{peerName}</p>
           <span className="shrink-0 font-mono text-[10px] text-faint">
             {formatDay(chat.lastMessage?.createdAt ?? null)}
           </span>
@@ -103,19 +102,18 @@ export function Sidebar({
 }: Props) {
   const [filter, setFilter] = useState('')
 
-  const normalizedFilter = filter.trim().toLowerCase()
-  const filtered = chats.filter((chat) => {
-    if (!normalizedFilter) return true
-    const peer = peerOf(chat, ownUserId)
-    const searchable = [peer?.userId ?? '', chat.chatId].join(' ').toLowerCase()
-    return searchable.includes(normalizedFilter)
+  const filtered = chats.filter((c) => {
+    const peer = peerOf(c, ownUserId)
+    const name = peer ? getCachedProfileSync(peer.userId)?.name : null
+    if (!name) return true
+    return name.toLowerCase().includes(filter.toLowerCase())
   })
 
   return (
-    <aside className="flex h-full w-full shrink-0 flex-col border-r border-line bg-surface sm:max-w-[320px]">
-      <div className="flex items-center justify-between border-b border-line px-4 py-4">
+    <aside className="flex h-full min-h-0 w-full min-w-0 shrink-0 flex-col border-r border-line bg-surface pb-[env(safe-area-inset-bottom)]">
+      <div className="flex items-center justify-between border-b border-line px-4 pb-4 pt-[calc(1rem_+_env(safe-area-inset-top))]">
         <div className="flex items-center gap-2">
-          <span className="font-display text-base font-semibold tracking-tight text-ink">Signalline</span>
+          <span className="font-display text-base font-semibold tracking-tight text-ink">Signaline</span>
         </div>
         <SignalDot connected={connected} />
       </div>
@@ -138,7 +136,7 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 pb-2">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {filtered.length === 0 && (
           <p className="px-3 py-6 text-center text-sm text-faint">Пока нет ни одного диалога.</p>
         )}
@@ -170,7 +168,6 @@ export function Sidebar({
           </button>
         </div>
       )}
-      <p className="select-none px-4 py-1 text-center font-mono text-[9px] text-faint/40">v{__APP_VERSION__}</p>
     </aside>
   )
 }

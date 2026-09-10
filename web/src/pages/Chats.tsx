@@ -7,7 +7,6 @@ import { useAuth } from '../context/AuthContext'
 import { chatStore } from '../api/chatStore'
 import { socketManager } from '../api/ws'
 import { primeProfilesFromBatch } from '../api/profileCache'
-import { setActiveChatId } from '../utils/notifications'
 import type { ChatSummary } from '../types'
 
 export default function ChatsPage() {
@@ -20,21 +19,14 @@ export default function ChatsPage() {
 
   useEffect(() => {
     const unsub = chatStore.subscribeChats(setChats)
-    // Never fetch the chat list without a confirmed profile — chatStore is
-    // a long-lived singleton, not scoped to this component, so this can't
-    // rely solely on the route guard having kept us from mounting in the
-    // first place; it has to hold on its own too.
     if (profile) chatStore.init()
-    return unsub
+    return () => {
+      unsub()
+    }
   }, [profile])
 
   useEffect(() => socketManager.onStatus(setConnected), [])
 
-  // One POST /profile/batch for every peer in the visible chat list, instead
-  // of each Sidebar row fetching its own peer individually — already-cached
-  // profiles are skipped, so this only ever costs a request for names that
-  // are genuinely new (e.g. right after the initial chat list loads, or a
-  // newChat event adds someone we haven't seen this session).
   useEffect(() => {
     if (!profile) return
     const peerIds = chats.flatMap((c) => c.members.map((m) => m.userId)).filter((id) => id !== profile.userId)
@@ -47,13 +39,9 @@ export default function ChatsPage() {
     [activeChat, profile]
   )
 
-  useEffect(() => {
-    setActiveChatId(activeChatId)
-  }, [activeChatId])
-
   return (
-    <div className="flex h-screen w-full overflow-hidden">
-      <div className={`h-full w-full sm:flex sm:w-auto ${activeChatId ? 'hidden' : 'flex'}`}>
+    <div className="flex h-full w-full overflow-hidden">
+      <div className={`h-full w-full sm:flex sm:w-[320px] sm:shrink-0 ${activeChatId ? 'hidden' : 'flex'}`}>
         <Sidebar
           chats={chats}
           activeChatId={activeChatId}
@@ -98,7 +86,7 @@ export default function ChatsPage() {
           onCreated={(chatId, peer) => {
             if (!profile) return
             setShowNewChat(false)
-            chatStore.addLocalChat(chatId, { userId: profile.userId, name: profile.name }, peer)
+            chatStore.addLocalChat(chatId, { userId: profile.userId }, peer)
             setActiveChatId(chatId)
           }}
         />

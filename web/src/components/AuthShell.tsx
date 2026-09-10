@@ -14,13 +14,13 @@ export function AuthShell({
   footer?: ReactNode
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-full items-center justify-center px-4 py-8">
       <div className="w-full max-w-[420px] animate-rise">
         <div className="mb-8 flex items-center gap-3">
           <span className="relative flex h-2.5 w-2.5">
             <span className="absolute h-full w-full rounded-full bg-signal animate-pulse-signal" />
           </span>
-          <span className="font-display text-lg font-medium tracking-tight text-ink">Signalline</span>
+          <span className="font-display text-lg font-medium tracking-tight text-ink">Signaline</span>
         </div>
 
         <div className="rounded-2xl border border-line bg-surface p-8 shadow-2xl shadow-black/40">

@@ -1,8 +1,22 @@
-// The backend caps avatars at 600x600px (png/jpeg). Rather than reject
-// whatever photo the person picks, crop it to a centered square and scale
-// it down to fit — so any reasonably-sized photo just works.
-
 const MAX_AVATAR_SIDE = 600
+const JPEG_QUALITY = 0.92
+const AVATAR_FILE_NAME = 'avatar.jpg'
+const AVATAR_MIME = 'image/jpeg'
+
+export class UnreadableImageError extends Error {
+  constructor() {
+    super('image could not be decoded by the browser')
+  }
+}
+
+export class AvatarBudgetExceededError extends Error {
+  constructor(
+    readonly encodedBytes: number,
+    readonly budgetBytes: number
+  ) {
+    super('encoded avatar does not fit into the remaining media space')
+  }
+}
 
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -14,29 +28,40 @@ function loadImage(file: File): Promise<HTMLImageElement> {
     }
     img.onerror = () => {
       URL.revokeObjectURL(url)
-      reject(new Error('Не удалось прочитать изображение'))
+      reject(new UnreadableImageError())
     }
     img.src = url
   })
 }
 
-export async function prepareAvatarFile(file: File, maxSide = MAX_AVATAR_SIDE): Promise<File> {
-  const img = await loadImage(file)
-  const side = Math.min(img.width, img.height)
-  const sx = (img.width - side) / 2
-  const sy = (img.height - side) / 2
-  const targetSide = Math.min(side, maxSide)
+function drawCenteredSquare(img: HTMLImageElement, targetSide: number): HTMLCanvasElement {
+  const sourceSide = Math.min(img.width, img.height)
+  const sourceX = (img.width - sourceSide) / 2
+  const sourceY = (img.height - sourceSide) / 2
 
   const canvas = document.createElement('canvas')
   canvas.width = targetSide
   canvas.height = targetSide
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Canvas недоступен')
-  ctx.drawImage(img, sx, sy, side, side, 0, 0, targetSide, targetSide)
+  ctx.drawImage(img, sourceX, sourceY, sourceSide, sourceSide, 0, 0, targetSide, targetSide)
+  return canvas
+}
 
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Не удалось обработать изображение'))), 'image/jpeg', 0.92)
+function encodeJpeg(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new UnreadableImageError())), AVATAR_MIME, JPEG_QUALITY)
   })
+}
 
-  return new File([blob], 'avatar.jpg', { type: 'image/jpeg' })
+export async function prepareAvatarFile(file: File, budgetBytes = Number.POSITIVE_INFINITY): Promise<File> {
+  const img = await loadImage(file)
+  if (!img.width || !img.height) throw new UnreadableImageError()
+
+  const targetSide = Math.min(img.width, img.height, MAX_AVATAR_SIDE)
+  const blob = await encodeJpeg(drawCenteredSquare(img, targetSide))
+
+  if (blob.size > budgetBytes) throw new AvatarBudgetExceededError(blob.size, budgetBytes)
+
+  return new File([blob], AVATAR_FILE_NAME, { type: AVATAR_MIME })
 }

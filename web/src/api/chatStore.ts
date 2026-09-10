@@ -1,18 +1,6 @@
-// Single source of truth for chats + message history, shared by the
-// sidebar and the open chat window. Exists specifically so that:
-//
-//  1. Every WebSocket event triggers AT MOST one GET to the backend for the
-//     one message it references — never once per UI consumer that cares
-//     about it. `inflightMessageFetches` dedupes even truly concurrent
-//     calls. Events for our own actions (send/edit/delete) never fetch at
-//     all — the backend broadcasts chat events to every subscriber
-//     including the sender, so our own echo is guaranteed, and by then we
-//     already have the exact result from the POST/PUT/DELETE response.
-//  2. Chat history is cached in memory per chat. Opening a chat fetches its
-//     history once; switching away and back re-reads the cache, no network
-//     call. Cache is capped per chat to bound memory in a long-lived tab.
 import { getChatInfo, getChatHistory, getChatsFull, getMessage } from './messenger'
 import { socketManager } from './ws'
+import { primeCachedProfile } from './profileCache'
 import type { ChatSummary, Message, PublicProfile, WSEvent } from '../types'
 
 const HISTORY_PAGE_SIZE = 50
@@ -38,22 +26,12 @@ class ChatStore {
   private messageListeners = new Map<string, Set<(messages: Message[]) => void>>()
 
   private inflightMessageFetches = new Map<string, Promise<Message>>()
-  // Message IDs from our own send/edit/delete — every one of these is
-  // guaranteed to echo back as a WS event (the backend broadcasts to every
-  // subscriber of the chat, sender included), so we mark it here and
-  // consume the marker the moment that echo shows up, skipping the fetch
-  // entirely since we already know the exact result from our own POST/PUT/
-  // DELETE response.
   private ownMutations = new Set<string>()
-  // chatId -> count of our own sends still awaiting their POST response.
-  // Used only to close the race with the WS push, handled in bindWs below.
   private pendingSendChats = new Map<string, number>()
 
   private initPromise: Promise<void> | null = null
   private wsBound = false
 
-  /** Fetches the chat list exactly once (idempotent) — the only bulk call
-   * in the whole app. Everything after this is incremental. */
   init(): Promise<void> {
     this.bindWs()
     if (this.initPromise) return this.initPromise
@@ -66,8 +44,6 @@ class ChatStore {
     return this.initPromise
   }
 
-  /** Call on logout so a fresh login in the same tab doesn't inherit the
-   * previous account's cached chats/messages. */
   reset() {
     this.chats = []
     this.messagesByChat.clear()
@@ -110,8 +86,6 @@ class ChatStore {
     return () => set!.delete(cb)
   }
 
-  /** Loads history once per chat. Subsequent calls for an already-loaded
-   * chat resolve immediately with no network request. */
   async ensureHistory(chatId: string): Promise<void> {
     if (this.historyLoaded.has(chatId)) return
     const data = await getChatHistory(chatId, { q: HISTORY_PAGE_SIZE })
@@ -123,9 +97,6 @@ class ChatStore {
     this.notifyMessages(chatId)
   }
 
-  /** Whether scrolling up in this chat could still reveal older messages
-   * we haven't fetched yet. False until the initial load has happened, and
-   * false again once we've confirmed we hit the beginning of the chat. */
   hasMoreHistory(chatId: string): boolean {
     return this.historyLoaded.has(chatId) && !this.historyExhausted.has(chatId)
   }
@@ -134,10 +105,6 @@ class ChatStore {
     return this.loadingMore.has(chatId)
   }
 
-  /** Fetches the next page of older messages (scrolled-up-into-the-past),
-   * using the oldest cached message as the pivot. Only ever one request in
-   * flight per chat — a second call while one's already running just waits
-   * on the same promise instead of firing another GET. */
   loadMoreHistory(chatId: string): Promise<void> {
     if (!this.hasMoreHistory(chatId)) return Promise.resolve()
     const existing = this.loadingMore.get(chatId)
@@ -171,10 +138,9 @@ class ChatStore {
     return promise
   }
 
-  /** Adds a chat we just created ourselves from data already on hand — no
-   * network round-trip. */
-  addLocalChat(chatId: string, own: { userId: string; name: string }, peer: PublicProfile) {
+  addLocalChat(chatId: string, own: { userId: string }, peer: PublicProfile) {
     if (this.chats.some((c) => c.chatId === chatId)) return
+    primeCachedProfile(peer)
     const now = new Date().toISOString()
     const chat: ChatSummary = {
       chatId: chatId,
@@ -188,9 +154,6 @@ class ChatStore {
     this.notifyChats()
   }
 
-  /** Call right before `POST /msg/chat/{id}` and again (in a `finally`)
-   * once it settles — lets the WS handler recognize "there's a send from us
-   * in flight for this chat" even before we know the message's real ID. */
   beginOwnSend(chatId: string) {
     this.pendingSendChats.set(chatId, (this.pendingSendChats.get(chatId) ?? 0) + 1)
   }
@@ -204,14 +167,12 @@ class ChatStore {
     }
   }
 
-  /** Optimistic local update for a message we just sent. */
   applyOwnMessage(chatId: string, message: Message) {
     this.ownMutations.add(message.messageId)
     this.appendMessage(chatId, message)
     this.updatePreview(chatId, message, true)
   }
 
-  /** Optimistic local update for a message we just edited/deleted. */
   applyOwnPatch(chatId: string, messageId: string, patch: Partial<Message>) {
     this.ownMutations.add(messageId)
     const list = this.messagesByChat.get(chatId)
@@ -232,7 +193,7 @@ class ChatStore {
 
   private appendMessage(chatId: string, message: Message) {
     const list = this.messagesByChat.get(chatId)
-    if (!list) return // history not cached for this chat — nothing to append to
+    if (!list) return
     if (list.some((m) => m.messageId === message.messageId)) return
     let next = [...list, message]
     if (next.length > MAX_CACHED_MESSAGES_PER_CHAT) {
@@ -278,8 +239,6 @@ class ChatStore {
     this.messageListeners.get(chatId)?.forEach((cb) => cb(this.getMessages(chatId)))
   }
 
-  /** Shares one in-flight (or just-completed) GET across every caller that
-   * asks for the same chatId+msgId at roughly the same time. */
   private fetchMessageOnce(chatId: string, msgId: string): Promise<Message> {
     const key = `${chatId}:${msgId}`
     let promise = this.inflightMessageFetches.get(key)
@@ -292,10 +251,6 @@ class ChatStore {
     return promise
   }
 
-  /** For resolving a reply-to reference: checks the already-loaded history
-   * first (the common case — you can only reply to a message you can see),
-   * falling back to a single deduped GET for anything older that isn't
-   * cached yet (e.g. a reply to a message from before the loaded window). */
   async getOrFetchMessage(chatId: string, messageId: string): Promise<Message | null> {
     const cached = this.messagesByChat.get(chatId)?.find((m) => m.messageId === messageId)
     if (cached) return cached
@@ -306,13 +261,6 @@ class ChatStore {
     }
   }
 
-  /** Adds/removes a single user's reaction on a message, purely locally —
-   * no network call. Used both for our own optimistic toggle and for
-   * newReaction/delReaction WS events (which carry the full result already,
-   * so there's nothing to fetch either way). Idempotent: adding a userId
-   * that's already in the group, or removing one that isn't, is a no-op —
-   * so calling this twice for the same logical change (e.g. our own
-   * optimistic update followed by its WS echo) is harmless. */
   private patchReaction(chatId: string, msgId: string, emoji: string, userId: string, add: boolean) {
     const list = this.messagesByChat.get(chatId)
     if (!list) return
@@ -373,7 +321,7 @@ class ChatStore {
         event.type !== 'messageRedacted' &&
         event.type !== 'messageDeleted'
       ) {
-        return // status / response frames aren't ours to handle here
+        return
       }
 
       const chatId = event.payload.chatId
@@ -386,37 +334,23 @@ class ChatStore {
           if (this.chats.some((c) => c.chatId === chatId)) return
           this.chats = sortChats([{ chatId: chatId, members: info.members, lastMessage: null }, ...this.chats])
           this.notifyChats()
-        } catch {
-          // ignore
-        }
+        } catch {}
         return
       }
 
       const msgId = event.payload.msgId
       if (!msgId) return
 
-      // The WS push for a message we just sent can (and often does) arrive
-      // before the POST response completes — they're two independent round
-      // trips from the same server action, with no ordering guarantee. If
-      // there's a send from us in flight for this exact chat and we don't
-      // yet recognize this message, give our own request a brief chance to
-      // land and register it before assuming this is someone else's
-      // message and hitting the network for it.
       if (event.type === 'newMessage' && !this.ownMutations.has(msgId) && this.pendingSendChats.has(chatId)) {
         await new Promise((resolve) => setTimeout(resolve, 250))
       }
 
-      // We caused this ourselves — we already have the exact result from
-      // our own POST/PUT/DELETE response, so there's nothing to fetch.
       if (this.ownMutations.delete(msgId)) return
 
       const existingChat = this.chats.find((c) => c.chatId === chatId)
       const isPreviewMessage = event.type === 'newMessage' || existingChat?.lastMessage?.messageId === msgId
       const historyCached = this.historyLoaded.has(chatId)
 
-      // Nobody (sidebar preview, open chat window) would use this fetch —
-      // skip it. E.g. an edit to a message buried in history of a chat
-      // that isn't currently open.
       if (existingChat && !isPreviewMessage && !historyCached) return
 
       try {
@@ -431,16 +365,13 @@ class ChatStore {
         if (existingChat) {
           this.updatePreview(chatId, msg, event.type === 'newMessage')
         } else {
-          // Event for a chat we don't know about locally yet.
           const info = await getChatInfo(chatId)
           if (!this.chats.some((c) => c.chatId === chatId)) {
             this.chats = sortChats([{ chatId: chatId, members: info.members, lastMessage: msg }, ...this.chats])
             this.notifyChats()
           }
         }
-      } catch {
-        // message may already be gone — ignore
-      }
+      } catch {}
     })
   }
 }

@@ -1,65 +1,69 @@
 import axios from 'axios'
 import { tokenStorage } from '../utils/tokenStorage'
+import { isJwtExpiringSoon } from '../utils/jwt'
 import type { AuthTokens } from '../types'
 
 export const API_BASE_URL: string = import.meta.env.VITE_API_URL || '/api'
 
-let isRefreshing = false
-let queue: Array<(token: string | null) => void> = []
+export const TOKEN_REFRESHED_EVENT = 'signaline:token-refreshed'
+export const SESSION_ENDED_EVENT = 'signaline:logout'
 
-function flushQueue(token: string | null) {
-  queue.forEach((cb) => cb(token))
-  queue = []
+const CROSS_TAB_LOCK_NAME = 'signaline.token-refresh'
+const REFRESH_MARGIN_SEC = 60
+
+const SESSION_REJECTED_STATUSES = [400, 401, 403]
+
+function isRefreshTokenRejected(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false
+  const status = error.response?.status
+  return status !== undefined && SESSION_REJECTED_STATUSES.includes(status)
 }
 
-/**
- * Performs (or joins an in-flight) refresh-token exchange, updates storage,
- * and notifies the rest of the app. Shared by the REST 401 interceptor
- * (client.ts) and the WebSocket's proactive pre-connect expiry check
- * (ws.ts) so the two can never race each other into firing two concurrent
- * refreshes — whichever calls first "wins", the other just waits on the
- * same in-flight promise via `queue`.
- *
- * Deliberately lives in its own module with no dependency on client.ts or
- * ws.ts: client.ts needs this to retry a failed REST call, ws.ts needs this
- * to avoid ever reconnecting with a token it already knows is dead — if
- * this lived in either of those files, the other would have to import it,
- * creating an import cycle between them.
- *
- * Returns the fresh access token, or null if the refresh token itself is
- * dead too (session is over — dispatches 'signalline:logout' in that case,
- * which AuthContext listens for). On success, dispatches
- * 'signalline:token-refreshed', which ws.ts listens for to pick up the new
- * token immediately instead of waiting out its own retry backoff.
- */
-export async function ensureFreshToken(): Promise<string | null> {
-  const tokens = tokenStorage.get()
-  if (!tokens?.refreshToken) {
-    tokenStorage.clear()
+function endSession() {
+  tokenStorage.clear()
+  window.dispatchEvent(new CustomEvent(SESSION_ENDED_EVENT))
+}
+
+function withCrossTabLock<T>(run: () => Promise<T>): Promise<T> {
+  const locks = navigator.locks
+  if (!locks) return run()
+  return new Promise<T>((resolve, reject) => {
+    locks.request(CROSS_TAB_LOCK_NAME, () => run().then(resolve, reject)).catch(reject)
+  })
+}
+
+async function rotateTokens(rejectedAccessToken?: string): Promise<string | null> {
+  const stored = tokenStorage.get()
+  if (!stored?.refreshToken) {
+    endSession()
     return null
   }
 
-  if (isRefreshing) {
-    return new Promise((resolve) => {
-      queue.push(resolve)
-    })
-  }
+  const rotatedElsewhere = rejectedAccessToken
+    ? stored.accessToken !== rejectedAccessToken
+    : !isJwtExpiringSoon(stored.accessToken, REFRESH_MARGIN_SEC)
+  if (rotatedElsewhere) return stored.accessToken
 
-  isRefreshing = true
   try {
     const { data } = await axios.post<AuthTokens>(`${API_BASE_URL}/auth/update`, {
-      refreshToken: tokens.refreshToken,
+      refreshToken: stored.refreshToken,
     })
     tokenStorage.set(data)
-    window.dispatchEvent(new CustomEvent('signalline:token-refreshed'))
-    flushQueue(data.accessToken)
+    window.dispatchEvent(new CustomEvent(TOKEN_REFRESHED_EVENT))
     return data.accessToken
-  } catch {
-    flushQueue(null)
-    tokenStorage.clear()
-    window.dispatchEvent(new CustomEvent('signalline:logout'))
+  } catch (error) {
+    if (isRefreshTokenRejected(error)) endSession()
     return null
-  } finally {
-    isRefreshing = false
   }
+}
+
+let refreshInFlight: Promise<string | null> | null = null
+
+export function ensureFreshToken(rejectedAccessToken?: string): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = withCrossTabLock(() => rotateTokens(rejectedAccessToken)).finally(() => {
+      refreshInFlight = null
+    })
+  }
+  return refreshInFlight
 }

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from
 import type { ChatMember, Message, StatusInfo } from '../types'
 import { MessageBubble } from './MessageBubble'
 import { EmojiPicker } from './EmojiPicker'
+import { PeerProfileModal } from './PeerProfileModal'
 import { deleteMessage, editMessage, postMessage } from '../api/messenger'
 import { addReaction, removeReaction } from '../api/reactions'
 import { presenceTracker } from '../api/presenceTracker'
@@ -12,6 +13,7 @@ import { presence } from '../utils/presence'
 import { Avatar } from './Avatar'
 import { isStatusActive, statusLabel } from '../utils/statusLabel'
 import { useDecryptedText } from '../utils/useDecryptedText'
+import { onViewportChange } from '../utils/viewportMetrics'
 
 const LOAD_MORE_SCROLL_THRESHOLD = 80
 
@@ -20,7 +22,6 @@ interface Props {
   ownUserId: string
   ownPubKey: string
   peer: ChatMember | null
-  /** Only passed on mobile layouts — shows a back button that returns to the chat list. */
   onBack?: () => void
 }
 
@@ -34,10 +35,8 @@ export function ChatWindow({ chatId, ownUserId, ownPubKey, peer, onBack }: Props
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
+  const [showPeerProfile, setShowPeerProfile] = useState(false)
 
-  // For the header avatar — the same public profile getCachedProfile
-  // already fetches (and permanently caches) elsewhere in this component
-  // for encryption, just wrapped reactively for display here.
   const peerProfile = usePublicProfile(peer?.userId ?? null)
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -45,22 +44,11 @@ export function ChatWindow({ chatId, ownUserId, ownPubKey, peer, onBack }: Props
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isPrependingRef = useRef(false)
   const loadingMoreRef = useRef(false)
-  // False until we've done the initial jump-to-bottom for this chat. Guards
-  // the scroll-up pagination trigger from firing on the very first paint,
-  // when the container briefly sits at scrollTop 0 (top) before we've had a
-  // chance to place it at the bottom — without this, opening a chat could
-  // both flash the oldest messages first AND immediately fire off a
-  // "load more" request nobody asked for.
   const readyRef = useRef(false)
+  const bottomDistanceRef = useRef(0)
 
-  // The reply target is always a message we already have fully rendered —
-  // this reads the shared decrypt cache (near-instant) rather than
-  // re-decrypting anything.
   const replyPreview = useDecryptedText(replyingTo, ownUserId, chatId)
 
-  // Reads from — and populates — the shared cache. A chat opened once stays
-  // cached for the rest of the session: switching away and back never
-  // re-fetches history from the network.
   useEffect(() => {
     readyRef.current = false
     setLoading(!chatStore.isHistoryLoaded(chatId))
@@ -73,10 +61,6 @@ export function ChatWindow({ chatId, ownUserId, ownPubKey, peer, onBack }: Props
     setReplyingTo(null)
   }, [chatId])
 
-  // Places the view at the bottom. Runs synchronously before the browser
-  // paints, so there's no visible top-of-history flash on open, and (unlike
-  // a smooth scrollIntoView) scrollTop never passes through the low values
-  // that would otherwise trip the load-more-history threshold below.
   useLayoutEffect(() => {
     if (loading) return
     const el = scrollRef.current
@@ -84,6 +68,7 @@ export function ChatWindow({ chatId, ownUserId, ownPubKey, peer, onBack }: Props
 
     if (!readyRef.current) {
       el.scrollTop = el.scrollHeight
+      bottomDistanceRef.current = 0
       readyRef.current = true
       return
     }
@@ -93,9 +78,6 @@ export function ChatWindow({ chatId, ownUserId, ownPubKey, peer, onBack }: Props
     }
   }, [loading, messages])
 
-  // Peer presence — a live subscription (WS push events via req:2 "track"),
-  // not polling. presenceTracker handles the one-time GET for a baseline
-  // plus the track request; this just rides the shared cache.
   useEffect(() => {
     if (!peer) {
       setPeerStatus(null)
@@ -104,8 +86,6 @@ export function ChatWindow({ chatId, ownUserId, ownPubKey, peer, onBack }: Props
     return presenceTracker.subscribe(peer.userId, setPeerStatus)
   }, [peer])
 
-  // Auto-grow the composer textarea up to a max height instead of a fixed
-  // single row with an awkward internal scrollbar.
   useLayoutEffect(() => {
     const el = textareaRef.current
     if (!el) return
@@ -113,7 +93,22 @@ export function ChatWindow({ chatId, ownUserId, ownPubKey, peer, onBack }: Props
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`
   }, [draft])
 
+  useEffect(
+    () =>
+      onViewportChange(() => {
+        const el = scrollRef.current
+        if (!el) return
+        el.scrollTop = Math.max(0, el.scrollHeight - el.clientHeight - bottomDistanceRef.current)
+      }),
+    []
+  )
+
   async function handleScroll() {
+    const scrolled = scrollRef.current
+    if (scrolled) {
+      bottomDistanceRef.current = Math.max(0, scrolled.scrollHeight - scrolled.scrollTop - scrolled.clientHeight)
+    }
+
     if (!readyRef.current || loadingMoreRef.current) return
     const el = scrollRef.current
     if (!el) return
@@ -134,9 +129,6 @@ export function ChatWindow({ chatId, ownUserId, ownPubKey, peer, onBack }: Props
         node.scrollTop = node.scrollHeight - prevScrollHeight + prevScrollTop
       }
       isPrependingRef.current = false
-      // Only re-armed once the scroll position is actually fixed — otherwise
-      // the container can still read as "near the top" for a frame and fire
-      // a second load before this one's correction has applied.
       loadingMoreRef.current = false
       setLoadingMore(false)
     })
@@ -205,8 +197,6 @@ export function ChatWindow({ chatId, ownUserId, ownPubKey, peer, onBack }: Props
     const target = messages.find((m) => m.messageId === messageId)
     const alreadyReacted = target?.reactions?.find((r) => r.emoji === emoji)?.users.includes(ownUserId) ?? false
 
-    // Optimistic — the WS echo that follows just re-applies the same
-    // (idempotent) change, no harm done either way.
     if (alreadyReacted) {
       chatStore.applyReactionRemoved(chatId, messageId, emoji, ownUserId)
     } else {
@@ -220,7 +210,6 @@ export function ChatWindow({ chatId, ownUserId, ownPubKey, peer, onBack }: Props
         await addReaction(chatId, messageId, emoji)
       }
     } catch {
-      // Roll back the optimistic change if the request actually failed.
       if (alreadyReacted) {
         chatStore.applyReactionAdded(chatId, messageId, emoji, ownUserId)
       } else {
@@ -266,8 +255,12 @@ export function ChatWindow({ chatId, ownUserId, ownPubKey, peer, onBack }: Props
           : '…'
 
   return (
-    <div className="flex h-full flex-1 flex-col bg-void">
-      <div className="flex items-center gap-3 border-b border-line px-4 py-4 sm:px-6">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-void">
+      {showPeerProfile && peerProfile && (
+        <PeerProfileModal profile={peerProfile} status={peerStatus} onClose={() => setShowPeerProfile(false)} />
+      )}
+
+      <div className="flex shrink-0 items-center gap-3 border-b border-line px-4 pb-4 pt-[calc(1rem_+_env(safe-area-inset-top))] sm:px-6">
         {onBack && (
           <button
             type="button"
@@ -280,27 +273,35 @@ export function ChatWindow({ chatId, ownUserId, ownPubKey, peer, onBack }: Props
             </svg>
           </button>
         )}
-        <Avatar
-          avatarId={peerProfile?.additional?.avatars?.[0]}
-          seed={peer?.userId ?? chatId}
-          name={peerProfile?.name ?? '? ?'}
-          className="h-9 w-9 text-xs"
-        />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-ink">{peerProfile?.name ?? 'Диалог'}</p>
-          {peerStatus && (
-            <p className={`truncate font-mono text-xs ${isStatusActive(peerStatus) ? 'text-signal' : 'text-faint'}`}>
-              {statusLabel(peerStatus)}
-            </p>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowPeerProfile(true)}
+          disabled={!peerProfile}
+          aria-label="Профиль собеседника"
+          className="-mx-2 flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1 text-left transition-colors enabled:hover:bg-raised disabled:cursor-default"
+        >
+          <Avatar
+            avatarId={peerProfile?.additional?.avatars?.[0]}
+            seed={peer?.userId ?? chatId}
+            name={peerProfile?.name ?? '? ?'}
+            className="h-9 w-9 text-xs"
+          />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-ink">{peerProfile?.name ?? 'Диалог'}</p>
+            {peerStatus && (
+              <p className={`truncate font-mono text-xs ${isStatusActive(peerStatus) ? 'text-signal' : 'text-faint'}`}>
+                {statusLabel(peerStatus)}
+              </p>
+            )}
+          </div>
+        </button>
       </div>
 
       <div
         ref={scrollRef}
         onScroll={handleScroll}
         style={{ overflowAnchor: 'none' }}
-        className="flex-1 overflow-y-auto px-4 py-4 sm:px-6"
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 sm:px-6"
       >
         {loading && <p className="text-center text-sm text-faint">Загружаем историю…</p>}
         {!loading && loadingMore && (
@@ -317,7 +318,7 @@ export function ChatWindow({ chatId, ownUserId, ownPubKey, peer, onBack }: Props
               chatId={chatId}
               isOwn={m.senderId === ownUserId}
               ownUserId={ownUserId}
-              peer={peer}
+              peerName={peerProfile?.name ?? 'Собеседник'}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onReply={handleReply}
@@ -327,7 +328,7 @@ export function ChatWindow({ chatId, ownUserId, ownPubKey, peer, onBack }: Props
         <div ref={bottomRef} />
       </div>
 
-      <div className="relative border-t border-line px-3 py-2.5 sm:px-4">
+      <div className="relative shrink-0 border-t border-line px-3 pt-2.5 pb-[calc(0.625rem_+_env(safe-area-inset-bottom))] sm:px-4">
         {showEmojiPicker && (
           <EmojiPicker onSelect={insertEmoji} onClose={() => setShowEmojiPicker(false)} />
         )}

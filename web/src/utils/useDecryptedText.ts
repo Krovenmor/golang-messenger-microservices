@@ -3,9 +3,6 @@ import type { Message } from '../types'
 import { cryptoStore } from '../api/cryptoStore'
 import { decryptMessage } from './messageCrypto'
 
-// nonce is unique per encryption operation (never reused, even across edits
-// of the same message), so keying the cache on messageId+nonce means a
-// redacted message naturally busts its own stale cache entry.
 const cache = new Map<string, string>()
 
 function cacheKey(message: Message): string {
@@ -13,8 +10,8 @@ function cacheKey(message: Message): string {
 }
 
 export type DecryptState =
-  | { status: 'empty' } // deleted message, nothing to decrypt
-  | { status: 'locked' } // crypto not unlocked yet this session
+  | { status: 'empty' }
+  | { status: 'locked' }
   | { status: 'loading' }
   | { status: 'ok'; text: string }
   | { status: 'error' }
@@ -25,10 +22,6 @@ export function useDecryptedText(
   chatId: string
 ): DecryptState {
   const [state, setState] = useState<DecryptState>(() => computeInitial(message))
-  // Re-run whenever crypto locks/unlocks — without this, a message that
-  // rendered while the key hadn't loaded yet (e.g. still being read back
-  // from IndexedDB) would stay stuck showing "locked" forever, even after
-  // the key becomes available a moment later.
   const [cryptoUnlocked, setCryptoUnlocked] = useState(() => cryptoStore.isUnlocked())
 
   useEffect(() => cryptoStore.subscribe(setCryptoUnlocked), [])
@@ -43,10 +36,6 @@ export function useDecryptedText(
       return
     }
 
-    // ownUserId isn't known for a brief moment during the very first render
-    // in some flows — deciding sender-vs-receiver role with a wrong/missing
-    // ownUserId would pick the wrong sealed key and fail outright, so wait
-    // rather than guess.
     if (!ownUserId) {
       setState({ status: 'loading' })
       return
@@ -66,7 +55,7 @@ export function useDecryptedText(
         if (!cancelled) setState({ status: 'ok', text })
       })
       .catch((err) => {
-        console.error('[signalline] failed to decrypt message', message.messageId, 'in chat', chatId, err)
+        console.error('[signaline] failed to decrypt message', message.messageId, 'in chat', chatId, err)
         if (!cancelled) setState({ status: 'error' })
       })
     return () => {

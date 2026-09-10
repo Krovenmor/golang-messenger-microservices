@@ -2,12 +2,13 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { createPortal } from 'react-dom'
 import { getSupportedReactions } from '../api/reactions'
 
-const MARGIN = 8
+const VIEWPORT_MARGIN = 8
+const ANCHOR_GAP = 6
+const MAX_REACTIONS = 16
 
 interface Anchor {
   x: number
   y: number
-  /** 'point' for a right-click cursor position, 'rect' to hang below a trigger element. */
   mode: 'point' | 'rect'
   rectRight?: number
   rectBottom?: number
@@ -19,8 +20,52 @@ interface Props {
   onClose: () => void
   onReact: (emoji: string) => void
   onReply: () => void
+  onCopy: () => void
   onEdit: () => void
   onDelete: () => void
+}
+
+interface Placement {
+  left: number
+  top: number
+  maxHeight: number
+  visible: boolean
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), Math.max(min, max))
+}
+
+function visibleViewport() {
+  const visual = window.visualViewport
+  return {
+    left: visual?.offsetLeft ?? 0,
+    top: visual?.offsetTop ?? 0,
+    width: visual?.width ?? window.innerWidth,
+    height: visual?.height ?? window.innerHeight,
+  }
+}
+
+function place(anchor: Anchor, contentHeight: number, panelWidth: number): Placement {
+  const view = visibleViewport()
+  const maxHeight = Math.min(contentHeight, view.height - VIEWPORT_MARGIN * 2)
+
+  const anchorTop = anchor.y
+  const anchorBottom = anchor.mode === 'rect' ? anchor.rectBottom ?? anchor.y : anchor.y
+
+  const roomBelow = view.top + view.height - VIEWPORT_MARGIN - (anchorBottom + ANCHOR_GAP)
+  const roomAbove = anchorTop - ANCHOR_GAP - (view.top + VIEWPORT_MARGIN)
+  const opensDownward = maxHeight <= roomBelow || roomBelow >= roomAbove
+
+  const preferredTop = opensDownward ? anchorBottom + ANCHOR_GAP : anchorTop - ANCHOR_GAP - maxHeight
+  const preferredLeft = anchor.mode === 'rect' ? (anchor.rectRight ?? anchor.x) - panelWidth : anchor.x
+
+  return {
+    left: clamp(preferredLeft, view.left + VIEWPORT_MARGIN, view.left + view.width - panelWidth - VIEWPORT_MARGIN),
+    top: clamp(preferredTop, view.top + VIEWPORT_MARGIN, view.top + view.height - maxHeight - VIEWPORT_MARGIN),
+    maxHeight,
+    visible: true,
+  }
 }
 
 function ReplyIcon() {
@@ -28,6 +73,15 @@ function ReplyIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M9 14L4 9l5-5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M4 9h10.5a5.5 5.5 0 015.5 5.5v1" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function CopyIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="9" y="9" width="12" height="12" rx="2" />
+      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -71,7 +125,7 @@ function MenuRow({
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm transition-colors ${
+      className={`flex w-full items-center gap-2.5 px-3.5 py-3 text-left text-sm transition-colors sm:py-2.5 ${
         danger ? 'text-warn hover:bg-warnDim' : 'text-ink hover:bg-signal/10 hover:text-signal'
       }`}
     >
@@ -81,13 +135,15 @@ function MenuRow({
   )
 }
 
-export function MessageActionMenu({ anchor, isOwn, onClose, onReact, onReply, onEdit, onDelete }: Props) {
+export function MessageActionMenu({ anchor, isOwn, onClose, onReact, onReply, onCopy, onEdit, onDelete }: Props) {
   const [emojis, setEmojis] = useState<string[]>([])
+  const canCopy = typeof navigator.clipboard?.writeText === 'function'
   const panelRef = useRef<HTMLDivElement>(null)
-  const [style, setStyle] = useState<{ left: number; top: number; opacity: number }>({
+  const [placement, setPlacement] = useState<Placement>({
     left: anchor.x,
     top: anchor.y,
-    opacity: 0,
+    maxHeight: 0,
+    visible: false,
   })
 
   useEffect(() => {
@@ -96,41 +152,42 @@ export function MessageActionMenu({ anchor, isOwn, onClose, onReact, onReply, on
       .catch(() => setEmojis([]))
   }, [])
 
-  // Measure the panel once it's actually in the DOM, then clamp it inside
-  // the viewport — this is what "floating above everything, never clipped
-  // by a scrolling message list" actually requires; you can't know the
-  // right position until you know the panel's real size.
   useLayoutEffect(() => {
-    const el = panelRef.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
+    const reposition = () => {
+      const el = panelRef.current
+      if (!el) return
+      setPlacement(place(anchor, el.scrollHeight, el.offsetWidth))
+    }
 
-    let left = anchor.mode === 'rect' ? (anchor.rectRight ?? anchor.x) - rect.width : anchor.x
-    let top = anchor.mode === 'rect' ? (anchor.rectBottom ?? anchor.y) + 6 : anchor.y
+    reposition()
 
-    left = Math.min(Math.max(MARGIN, left), window.innerWidth - rect.width - MARGIN)
-    top = Math.min(Math.max(MARGIN, top), window.innerHeight - rect.height - MARGIN)
-
-    setStyle({ left, top, opacity: 1 })
-  }, [anchor])
+    const visual = window.visualViewport
+    visual?.addEventListener('resize', reposition)
+    window.addEventListener('resize', reposition)
+    return () => {
+      visual?.removeEventListener('resize', reposition)
+      window.removeEventListener('resize', reposition)
+    }
+  }, [anchor, emojis, isOwn, canCopy])
 
   useEffect(() => {
-    function handlePointerDown(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose()
+    function isOutside(target: EventTarget | null) {
+      return !!panelRef.current && !panelRef.current.contains(target as Node)
+    }
+    function handlePointerDown(e: PointerEvent) {
+      if (isOutside(e.target)) onClose()
     }
     function handleKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
     }
-    // Telegram-style: a menu anchored to a specific message shouldn't
-    // linger while the list scrolls out from under it.
-    function handleScroll() {
-      onClose()
+    function handleScroll(e: Event) {
+      if (isOutside(e.target)) onClose()
     }
-    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('pointerdown', handlePointerDown)
     document.addEventListener('keydown', handleKey)
     document.addEventListener('scroll', handleScroll, true)
     return () => {
-      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('pointerdown', handlePointerDown)
       document.removeEventListener('keydown', handleKey)
       document.removeEventListener('scroll', handleScroll, true)
     }
@@ -139,14 +196,19 @@ export function MessageActionMenu({ anchor, isOwn, onClose, onReact, onReply, on
   return createPortal(
     <div
       ref={panelRef}
-      style={{ left: style.left, top: style.top, opacity: style.opacity }}
-      className="fixed z-50 w-60 overflow-hidden rounded-lg border border-signal/30 bg-surface shadow-[0_0_0_1px_rgba(94,234,212,0.08),0_12px_40px_-8px_rgba(94,234,212,0.25),0_8px_24px_-4px_rgba(0,0,0,0.5)] transition-opacity duration-100"
+      style={{
+        left: placement.left,
+        top: placement.top,
+        maxHeight: placement.maxHeight || undefined,
+        opacity: placement.visible ? 1 : 0,
+      }}
+      className="fixed z-50 w-60 max-w-[calc(100vw_-_1rem)] overflow-y-auto overscroll-contain rounded-lg border border-signal/30 bg-surface shadow-[0_0_0_1px_rgba(94,234,212,0.08),0_12px_40px_-8px_rgba(94,234,212,0.25),0_8px_24px_-4px_rgba(0,0,0,0.5)] transition-opacity duration-100"
     >
       <div className="h-[2px] w-full bg-gradient-to-r from-signal/0 via-signal to-signal/0" />
 
       {emojis.length > 0 && (
         <div className="flex flex-wrap gap-0.5 border-b border-line p-2">
-          {emojis.slice(0, 16).map((emoji) => (
+          {emojis.slice(0, MAX_REACTIONS).map((emoji) => (
             <button
               key={emoji}
               type="button"
@@ -171,6 +233,16 @@ export function MessageActionMenu({ anchor, isOwn, onClose, onReact, onReply, on
             onClose()
           }}
         />
+        {canCopy && (
+          <MenuRow
+            icon={<CopyIcon />}
+            label="Копировать"
+            onClick={() => {
+              onCopy()
+              onClose()
+            }}
+          />
+        )}
         {isOwn && (
           <>
             <MenuRow

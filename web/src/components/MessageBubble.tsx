@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
-import type { ChatMember, Message } from '../types'
+import { useEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'react'
+import type { Message } from '../types'
 import { fingerprintColor, formatTime } from '../utils/identity'
 import { useDecryptedText } from '../utils/useDecryptedText'
 import { useReplyPreview } from '../utils/useReplyPreview'
-import { usePublicProfile } from '../api/profileCache'
 import { MessageActionMenu } from './MessageActionMenu'
 
 interface Props {
@@ -11,7 +10,7 @@ interface Props {
   chatId: string
   isOwn: boolean
   ownUserId: string
-  peer: ChatMember | null
+  peerName: string
   onEdit: (messageId: string, text: string) => Promise<void>
   onDelete: (messageId: string) => Promise<void>
   onReply: (message: Message) => void
@@ -20,11 +19,36 @@ interface Props {
 
 type MenuAnchor = { x: number; y: number; mode: 'point' | 'rect'; rectRight?: number; rectBottom?: number }
 
-function ReplyQuote({ chatId, replyToId, ownUserId, peer }: { chatId: string; replyToId: string; ownUserId: string; peer: ChatMember | null }) {
-  const { target, decrypted } = useReplyPreview(chatId, replyToId, ownUserId)
-  const peerProfile = usePublicProfile(peer?.userId ?? null)
+const LONG_PRESS_MS = 450
+const LONG_PRESS_MOVE_TOLERANCE_PX = 10
+const SWIPE_AXIS_LOCK_PX = 12
+const SWIPE_TRIGGER_PX = 56
+const SWIPE_MAX_PX = 72
+const SWIPE_RETURN_MS = 160
 
-  const authorLabel = !target ? '' : target.senderId === ownUserId ? 'Вы' : peerProfile?.name ?? 'Собеседник'
+function ReplyIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M9 14L4 9l5-5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 9h10.5a5.5 5.5 0 015.5 5.5v1" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ReplyQuote({
+  chatId,
+  replyToId,
+  ownUserId,
+  peerName,
+}: {
+  chatId: string
+  replyToId: string
+  ownUserId: string
+  peerName: string
+}) {
+  const { target, decrypted } = useReplyPreview(chatId, replyToId, ownUserId)
+
+  const authorLabel = !target ? '' : target.senderId === ownUserId ? 'Вы' : peerName
   const text =
     decrypted.status === 'ok'
       ? decrypted.text
@@ -42,17 +66,24 @@ function ReplyQuote({ chatId, replyToId, ownUserId, peer }: { chatId: string; re
   )
 }
 
-export function MessageBubble({ message, chatId, isOwn, ownUserId, peer, onEdit, onDelete, onReply, onToggleReaction }: Props) {
+export function MessageBubble({ message, chatId, isOwn, ownUserId, peerName, onEdit, onDelete, onReply, onToggleReaction }: Props) {
   const decrypted = useDecryptedText(message, ownUserId, chatId)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [menuAnchor, setMenuAnchor] = useState<MenuAnchor | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const longPressTimer = useRef<number | null>(null)
+  const longPressOrigin = useRef<{ x: number; y: number } | null>(null)
+  const longPressOpenedMenu = useRef(false)
+  const bubbleRef = useRef<HTMLDivElement>(null)
+  const replyHintRef = useRef<HTMLSpanElement>(null)
+  const swipeOrigin = useRef<{ x: number; y: number } | null>(null)
+  const swipeAxis = useRef<'undecided' | 'horizontal' | 'vertical'>('undecided')
+  const swipeOffset = useRef(0)
   const color = fingerprintColor(message.senderId)
+  const swipeDirection = isOwn ? -1 : 1
 
-  // Seed the edit textarea from the decrypted text once it's available —
-  // there's nothing sensible to edit before that (the raw field is ciphertext).
   useEffect(() => {
     if (decrypted.status === 'ok') setDraft(decrypted.text)
   }, [decrypted])
@@ -88,30 +119,146 @@ export function MessageBubble({ message, chatId, isOwn, ownUserId, peer, onEdit,
   }
 
   function openMenuAtCursor(e: MouseEvent) {
-    if (decrypted.status !== 'ok') return
+    if (decrypted.status !== 'ok' || editing) return
     e.preventDefault()
+    cancelLongPress()
+    if (longPressOpenedMenu.current) return
     setMenuAnchor({ x: e.clientX, y: e.clientY, mode: 'point' })
   }
 
+  function paintSwipe(offset: number) {
+    const bubble = bubbleRef.current
+    if (bubble) bubble.style.transform = offset === 0 ? '' : `translateX(${offset}px)`
+    const hint = replyHintRef.current
+    if (hint) hint.style.opacity = `${Math.min(1, Math.abs(offset) / SWIPE_TRIGGER_PX)}`
+  }
+
+  function resetSwipe(animated: boolean) {
+    const bubble = bubbleRef.current
+    if (bubble) bubble.style.transition = animated ? `transform ${SWIPE_RETURN_MS}ms ease-out` : 'none'
+    paintSwipe(0)
+    swipeOffset.current = 0
+    swipeOrigin.current = null
+    swipeAxis.current = 'undecided'
+  }
+
+  function cancelLongPress() {
+    if (longPressTimer.current !== null) {
+      window.clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+    longPressOrigin.current = null
+  }
+
+  function handleTouchStart(e: TouchEvent<HTMLDivElement>) {
+    if (decrypted.status !== 'ok' || editing) return
+    const touch = e.touches[0]
+    if (!touch) return
+
+    cancelLongPress()
+    longPressOpenedMenu.current = false
+    longPressOrigin.current = { x: touch.clientX, y: touch.clientY }
+
+    swipeOrigin.current = { x: touch.clientX, y: touch.clientY }
+    swipeAxis.current = 'undecided'
+    swipeOffset.current = 0
+    if (bubbleRef.current) bubbleRef.current.style.transition = 'none'
+
+    const { clientX, clientY } = touch
+    longPressTimer.current = window.setTimeout(() => {
+      longPressTimer.current = null
+      longPressOpenedMenu.current = true
+      navigator.vibrate?.(10)
+      setMenuAnchor({ x: clientX, y: clientY, mode: 'point' })
+    }, LONG_PRESS_MS)
+  }
+
+  function handleTouchMove(e: TouchEvent<HTMLDivElement>) {
+    const touch = e.touches[0]
+    if (!touch) return
+
+    const pressOrigin = longPressOrigin.current
+    if (
+      pressOrigin &&
+      Math.hypot(touch.clientX - pressOrigin.x, touch.clientY - pressOrigin.y) > LONG_PRESS_MOVE_TOLERANCE_PX
+    ) {
+      cancelLongPress()
+    }
+
+    const origin = swipeOrigin.current
+    if (!origin) return
+
+    const dx = touch.clientX - origin.x
+    const dy = touch.clientY - origin.y
+
+    if (swipeAxis.current === 'undecided') {
+      if (Math.abs(dx) < SWIPE_AXIS_LOCK_PX && Math.abs(dy) < SWIPE_AXIS_LOCK_PX) return
+      swipeAxis.current = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical'
+    }
+    if (swipeAxis.current !== 'horizontal') return
+
+    const travel = Math.max(0, Math.min(dx * swipeDirection, SWIPE_MAX_PX))
+    swipeOffset.current = travel * swipeDirection
+    paintSwipe(swipeOffset.current)
+  }
+
+  function handleTouchEnd(e: TouchEvent<HTMLDivElement>) {
+    cancelLongPress()
+
+    const swipedFarEnough = Math.abs(swipeOffset.current) >= SWIPE_TRIGGER_PX
+    resetSwipe(true)
+    if (swipedFarEnough) {
+      navigator.vibrate?.(10)
+      onReply(message)
+    }
+
+    if (!longPressOpenedMenu.current) return
+    longPressOpenedMenu.current = false
+    e.preventDefault()
+  }
+
+  function handleTouchCancel() {
+    cancelLongPress()
+    resetSwipe(true)
+  }
+
+  function copyText() {
+    if (decrypted.status !== 'ok') return
+    navigator.clipboard.writeText(decrypted.text).catch(() => {})
+  }
+
   return (
-    <div className={`group flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-      <div className="my-1 flex max-w-[85%] sm:max-w-[70%] flex-col gap-1">
+    <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+      <div className="relative my-1 flex max-w-[85%] sm:max-w-[70%] flex-col gap-1">
+        <span
+          ref={replyHintRef}
+          aria-hidden
+          style={{ opacity: 0, [isOwn ? 'right' : 'left']: 0 }}
+          className="pointer-events-none absolute top-0 flex h-11 items-center text-signal"
+        >
+          <ReplyIcon />
+        </span>
         <div
+          ref={bubbleRef}
           onContextMenu={openMenuAtCursor}
-          className={`relative rounded-xl border-l-2 px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
+          className={`group relative touch-pan-y rounded-xl border-l-2 px-4 py-2.5 text-sm leading-relaxed shadow-sm [@media(hover:none)]:select-none [@media(hover:none)]:[-webkit-touch-callout:none] ${
             isOwn ? 'bg-raised text-ink' : 'bg-surface text-ink'
           }`}
           style={{ borderLeftColor: color }}
         >
           {message.replyToId && (
-            <ReplyQuote chatId={chatId} replyToId={message.replyToId} ownUserId={ownUserId} peer={peer} />
+            <ReplyQuote chatId={chatId} replyToId={message.replyToId} ownUserId={ownUserId} peerName={peerName} />
           )}
 
           {editing ? (
             <div className="flex flex-col gap-2">
               <textarea
                 autoFocus
-                className="w-full resize-none rounded-lg border border-line bg-void px-2.5 py-1.5 text-sm text-ink outline-none focus:border-signal"
+                className="w-full select-text resize-none rounded-lg border border-line bg-void px-2.5 py-1.5 text-sm text-ink outline-none focus:border-signal"
                 rows={2}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
@@ -147,7 +294,7 @@ export function MessageBubble({ message, chatId, isOwn, ownUserId, peer, onEdit,
               type="button"
               onClick={openMenuFromTrigger}
               aria-label="Действия с сообщением"
-              className="absolute -top-2.5 right-2 hidden h-6 w-6 items-center justify-center rounded-md border border-line bg-raised text-muted opacity-0 transition-opacity hover:border-signal/50 hover:text-signal group-hover:flex group-hover:opacity-100"
+              className="absolute -top-2.5 right-2 hidden h-6 w-6 items-center justify-center rounded-md border border-line bg-raised text-muted opacity-0 transition-opacity hover:border-signal/50 hover:text-signal [@media(hover:hover)]:group-hover:flex [@media(hover:hover)]:group-hover:opacity-100"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
                 <circle cx="5" cy="12" r="2" />
@@ -195,6 +342,7 @@ export function MessageBubble({ message, chatId, isOwn, ownUserId, peer, onEdit,
           isOwn={isOwn}
           onClose={() => setMenuAnchor(null)}
           onReact={(emoji) => onToggleReaction(message.messageId, emoji)}
+          onCopy={copyText}
           onReply={() => onReply(message)}
           onEdit={() => setEditing(true)}
           onDelete={() => onDelete(message.messageId)}

@@ -1,4 +1,4 @@
-# Signalline — фронтенд мессенджера
+# Signaline — фронтенд мессенджера
 
 React + TypeScript + Vite + Tailwind клиент для API из ТЗ (Auth API, Message API, WebSocket).
 
@@ -43,12 +43,12 @@ npm run dev
 Контейнер — чистый статик-сервер, никакого reverse-proxy внутри него нет: то, что стоит перед ним (гейтвей, балансировщик и т.д.), само отвечает за TLS и за маршрутизацию `/api`, `/api/ws`, `/static` куда нужно.
 
 ```bash
-docker build -t signalline-web \
+docker build -t signaline-web \
   --build-arg VITE_API_URL=/api \
   --build-arg VITE_STATIC_URL=/static \
   .
 
-docker run -p 8080:80 signalline-web
+docker run -p 8080:80 signaline-web
 ```
 
 `VITE_API_URL`/`VITE_WS_URL`/`VITE_STATIC_URL` — build-time аргументы, зашиваются в JS-бандл на этапе сборки и должны указывать туда, где API/WebSocket/Static Vault реально доступны из браузера (по умолчанию `/api` и `/static` — тот же origin, что и у фронта; `VITE_WS_URL` можно не задавать — адрес выведется из `location.host`). Если у API другой origin — задавайте здесь полный URL.

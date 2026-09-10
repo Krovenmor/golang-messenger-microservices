@@ -12,12 +12,6 @@ import { tokenStorage } from '../utils/tokenStorage'
 
 export default function CreateProfilePage() {
   const location = useLocation()
-  // Carried over from registration, so there's no network round-trip in the
-  // common case. If this page is reached any other way (reload, or a
-  // logged-in account that just doesn't have a profile yet) there's no
-  // navigation state to read, so it's fetched from the account endpoint
-  // instead — either way, the person is never asked to type a username
-  // that's really just their login again.
   const loginFromState = (location.state as { login?: string } | null)?.login ?? null
 
   const [userName, setUserName] = useState<string | null>(loginFromState)
@@ -73,9 +67,6 @@ export default function CreateProfilePage() {
         keyNonce: material.keyNonce,
       })
 
-      // The key was just generated fresh in this same flow — no need to
-      // make the user re-enter the password to unlock it, unlike a
-      // returning login (see UnlockProfile.tsx).
       if (privateKey) {
         cryptoStore.setKeys(privateKey, material.pubKey)
       }

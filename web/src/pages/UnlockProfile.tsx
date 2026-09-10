@@ -32,9 +32,6 @@ export default function UnlockProfilePage() {
     try {
       const privateKey = await unlockPrivateKey(password, profile.encryptedPrvKey, profile.kdfSalt, profile.keyNonce)
       cryptoStore.setKeys(privateKey, profile.pubKey)
-      // Remember it on this device (non-extractable — see keyVault.ts) so
-      // this screen doesn't show up again next time, only after logging
-      // out and back in, or on a different device/browser.
       await keyVault.saveKey(profile.userId, privateKey)
       navigate('/', { replace: true })
     } catch {
