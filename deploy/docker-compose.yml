@@ -27,7 +27,7 @@ services:
       - POSTGRES_USER=auth_user
       - POSTGRES_PASSWORD=auth_pass
     volumes:
-      - auth_db_data:/var/lib/data
+      - auth_db_data:/var/lib/postgresql/data
     ports:
       - "5431:5432"
     healthcheck:
@@ -43,7 +43,7 @@ services:
       - POSTGRES_USER=msg_user
       - POSTGRES_PASSWORD=msg_pass
     volumes:
-      - msg_db_data:/var/lib/data
+      - msg_db_data:/var/lib/postgresql/data
     ports:
       - "5430:5432"
     healthcheck:
@@ -59,7 +59,7 @@ services:
       - POSTGRES_USER=media_user
       - POSTGRES_PASSWORD=media_pass
     volumes:
-      - media_db_data:/var/lib/data
+      - media_db_data:/var/lib/postgresql/data
     ports:
       - "5429:5432"
     healthcheck:
@@ -75,7 +75,7 @@ services:
       - POSTGRES_USER=profile_user
       - POSTGRES_PASSWORD=profile_pass
     volumes:
-      - profile_db_data:/var/lib/data
+      - profile_db_data:/var/lib/postgresql/data
     ports:
       - "5428:5432"
     healthcheck:
