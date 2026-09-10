@@ -86,6 +86,16 @@ func (s *wsWorker) writeToMain(ch <-chan []byte, cancel func()) {
 	}
 }
 
+func (s *wsWorker) subChat(chatId uuid.UUID) error {
+	chatCh, chatCancel, err := s.sub.SubscribeOnChatEvents(s.ctx, chatId.String())
+	if err != nil {
+		log.Printf("trouble with subChat, err: %q, chatId: %q", err, chatId)
+		return ErrInternal
+	}
+	go s.writeToMain(chatCh, chatCancel)
+	return nil
+}
+
 func (s *wsWorker) subAll(accessToken string) error {
 	userString := s.userId.String()
 
@@ -106,12 +116,10 @@ func (s *wsWorker) subAll(accessToken string) error {
 	go s.writeToMain(chUserEvents, cancelEvents)
 
 	for _, chat := range chats {
-		chatCh, chatCancel, err := s.sub.SubscribeOnChatEvents(s.ctx, chat.String())
+		err := s.subChat(chat)
 		if err != nil {
-			log.Printf("trouble with SubscribeOnChatEvents, err: %q, chatId: %q", err, chat)
-			return ErrInternal
+			return err
 		}
-		go s.writeToMain(chatCh, chatCancel)
 	}
 	return nil
 }
@@ -274,6 +282,33 @@ func (s *wsWorker) writeMessage(msg []byte) error {
 	return nil
 }
 
+func (s *wsWorker) subOnNewChat(msg []byte) error {
+	var event broker.EventRaw
+	err := json.Unmarshal(msg, &event)
+	if err != nil {
+		return fmt.Errorf("subOnNewChat: trouble with unmarshaling msg, err: %w", err)
+	}
+	if event.Type != broker.NewChatType {
+		return nil
+	}
+
+	var newChatPayload broker.NewChatPayload
+	err = json.Unmarshal(event.Payload, &newChatPayload)
+	if err != nil {
+		return fmt.Errorf("subOnNewChat: trouble with unmarshaling event.Payload.(string), err: %w", err)
+	}
+	chatId, err := uuid.Parse(newChatPayload.ChatId)
+	if err != nil {
+		return fmt.Errorf("subOnNewChat: trouble with uuid.Parse(newChatPayload.ChatId), err: %w", err)
+	}
+	err = s.subChat(chatId)
+	if err != nil {
+		return fmt.Errorf("subOnNewChat: trouble with subChat, err: %w", err)
+	}
+
+	return nil
+}
+
 func (s *wsWorker) startWriter() error {
 	defer s.ctxCancel()
 
@@ -290,9 +325,15 @@ func (s *wsWorker) startWriter() error {
 				log.Printf("Trouble with chatEventsChannel")
 				return ErrInternal
 			}
+
 			err := s.writeMessage(msg)
 			if err != nil {
 				return err
+			}
+
+			err = s.subOnNewChat(msg)
+			if err != nil {
+				log.Printf("Error with subOnNewChat, err: %q", err)
 			}
 
 		case resp, ok := <-s.respWriteChannel:
