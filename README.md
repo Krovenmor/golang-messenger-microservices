@@ -7,6 +7,7 @@
 * **Сеть & Транспорт:** REST API, WebSockets, HTTP Reverse Proxy
 * **Безопасность:** JWT (Ed25519 асимметричные ключи), Rate Limiting, IP/User Blacklisting
 * **Инфраструктура:** Docker, Docker Compose
+* **Наблюдаемость:** Zap (структурированные JSON-логи с trace_id), OpenTelemetry, Jaeger
 
 ---
 
@@ -87,3 +88,8 @@ openssl req -x509 -newkey rsa:2048 -nodes -keyout certs/ssl/key.pem -out certs/s
 ```bash
 docker compose -f deploy/docker-compose.yml up --build -d
 ```
+
+### Логи и трейсы
+- Все сервисы пишут JSON-логи в stdout, уровень задается через `LOG_LEVEL` (по умолчанию `info`).
+- Сервисы с подключенным `di.TracingModule` отправляют трейсы по OTLP на адрес из `OTEL_EXPORTER_OTLP_ENDPOINT`. Если переменная не задана, trace_id все равно проставляется в логи, но трейсы никуда не экспортируются.
+- UI Jaeger: http://localhost:16686
