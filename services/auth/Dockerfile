@@ -9,7 +9,7 @@ COPY services/auth/ services/auth/
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /auth-service ./services/auth/cmd/api/
 
-FROM alpine:latest
+FROM alpine:3.24
 WORKDIR /app
 COPY --from=builder /auth-service .
 

@@ -42,9 +42,13 @@ func NewJwtAuth(repo AuthRepo, cache AuthTTLCache, pub Publisher, checker TokenC
 func (a *JwtAuth) Register(ctx context.Context, login, password, email, code string) error {
 	login, email = domain.NormalizeLogin(login), domain.NormalizeEmail(email)
 	rCode, err := a.cache.Get(ctx, email)
-	if err != nil {
-		log.Printf("Register: Get, err: %q", err)
+	if errors.Is(err, domain.ErrNotFound) {
+		log.Printf("Register: no verification code for %q", email)
 		return domain.ErrBadData
+	}
+	if err != nil {
+		log.Printf("Register: Trouble with cache.Get, err: %q", err)
+		return domain.ErrInternal
 	}
 	if rCode != code {
 		log.Printf("Register: Codes not equal: %v != %v", rCode, code)
@@ -55,6 +59,10 @@ func (a *JwtAuth) Register(ctx context.Context, login, password, email, code str
 		log.Printf("Register: user already exists: %q", login)
 		return domain.ErrBadData
 	}
+	if !errors.Is(err, domain.ErrNotFound) {
+		log.Printf("Register: Trouble with IsUserExists, login: %q, err: %q", login, err)
+		return domain.ErrInternal
+	}
 	hashed, err := a.hash.Hash(password)
 	if err != nil {
 		log.Printf("Register: Trouble with hashing password, err: %q", err)
@@ -62,9 +70,13 @@ func (a *JwtAuth) Register(ctx context.Context, login, password, email, code str
 	}
 	userId := uuid.New()
 	err = a.repo.AddNewUser(ctx, userId, login, hashed, email)
-	if err != nil {
-		log.Printf("Register: trouble with adding new user after repo.IsExists, login:%q, err:%q", login, err)
+	if errors.Is(err, domain.ErrAlreadyExists) {
+		log.Printf("Register: login or email already taken, login: %q, email: %q", login, email)
 		return domain.ErrBadData
+	}
+	if err != nil {
+		log.Printf("Register: Trouble with AddNewUser, login: %q, err: %q", login, err)
+		return domain.ErrInternal
 	}
 	err = a.cache.Del(ctx, email)
 	if err != nil {
@@ -95,15 +107,22 @@ func (a *JwtAuth) newTokens(ctx context.Context, userId uuid.UUID) (*domain.Toke
 func (a *JwtAuth) LogIn(ctx context.Context, login, password string) (*domain.Tokens, error) {
 	login = domain.NormalizeLogin(login)
 	userId, hashed, err := a.repo.GetUser(ctx, login)
-	if err != nil {
+	if errors.Is(err, domain.ErrNotFound) {
 		return nil, domain.ErrBadData
+	}
+	if err != nil {
+		log.Printf("LogIn: Trouble with GetUser, login: %q, err: %q", login, err)
+		return nil, domain.ErrInternal
 	}
 	err = a.hash.Comp(password, hashed)
 	if err != nil {
 		log.Printf("LogIn: Trouble with hash.Comp(), login: %q, err: %q", login, err)
 		return nil, domain.ErrBadData
 	}
-	a.repo.DeleteExpiredRefreshTokens(ctx, userId)
+	err = a.repo.DeleteExpiredRefreshTokens(ctx, userId)
+	if err != nil {
+		log.Printf("LogIn: Trouble with DeleteExpiredRefreshTokens, userId: %q, err: %q", userId.String(), err)
+	}
 	return a.newTokens(ctx, userId)
 }
 
@@ -113,35 +132,37 @@ func (a *JwtAuth) UpdateTokens(ctx context.Context, rToken string) (*domain.Toke
 		log.Printf("UpdateTokens: Not valid refresh token, err: %q", err)
 		return nil, domain.ErrBadData
 	}
+	if claims.Ttype != j.Refresh {
+		log.Printf("UpdateTokens: Not a refresh token, type: %q", claims.Ttype)
+		return nil, domain.ErrBadData
+	}
 	userId, err := uuid.Parse(claims.Subject)
 	if err != nil {
 		log.Printf("UpdateTokens: Trouble with uuid.Parse, err: %q", err)
 		return nil, domain.ErrInternal
 	}
-	hashedRToken := utils.Hash(rToken)
-	err = a.repo.FindRefresh(ctx, userId, hashedRToken)
-	if err != nil {
-		log.Printf("UpdateTokens: Trouble with FindRefresh, userId: %q, err: %q", userId.String(), err)
+	err = a.repo.DeleteRefresh(ctx, userId, utils.Hash(rToken))
+	if errors.Is(err, domain.ErrNotFound) {
+		log.Printf("UpdateTokens: refresh token not found, userId: %q", userId.String())
 		return nil, domain.ErrBadData
 	}
-	if time.Now().UTC().After(claims.ExpiresAt.Time) {
-		log.Printf("UpdateTokens: Expired refresh token, err: %q", err)
-		return nil, domain.ErrBadData
-	}
-	nTokens, err := a.newTokens(ctx, userId)
-	if err != nil {
-		log.Printf("UpdateTokens: Trouble with newTokens, err: %q", err)
-		return nil, err
-	}
-	err = a.repo.DeleteRefresh(ctx, userId, hashedRToken)
 	if err != nil {
 		log.Printf("UpdateTokens: Trouble with DeleteRefresh, userId: %q, err: %q", userId.String(), err)
+		return nil, domain.ErrInternal
 	}
-	return nTokens, nil
+	return a.newTokens(ctx, userId)
 }
 
 func (a *JwtAuth) GetUserInfo(ctx context.Context, userId uuid.UUID) (*domain.UserInfo, error) {
-	return a.repo.GetUserInfo(ctx, userId)
+	info, err := a.repo.GetUserInfo(ctx, userId)
+	if errors.Is(err, domain.ErrNotFound) {
+		return nil, domain.ErrBadData
+	}
+	if err != nil {
+		log.Printf("GetUserInfo: Trouble with repo.GetUserInfo, userId: %q, err: %q", userId.String(), err)
+		return nil, domain.ErrInternal
+	}
+	return info, nil
 }
 
 func (a *JwtAuth) GetUserTokens(ctx context.Context, userId uuid.UUID) (*domain.UserTokens, error) {
@@ -150,28 +171,28 @@ func (a *JwtAuth) GetUserTokens(ctx context.Context, userId uuid.UUID) (*domain.
 
 func (a *JwtAuth) SendCodeEmail(ctx context.Context, email string) (int, int, error) {
 	email = domain.NormalizeEmail(email)
-	_, err := a.cache.Get(ctx, email)
-	if err == nil {
-		log.Printf("SendCodeEmail: Already send code to %q", email)
-		return -1, -1, domain.ErrBadData
-	}
 	vCode, err := code.GenerateNewCode()
 	if err != nil {
 		log.Printf("SendCodeEmail: Trouble with GenerateNewCode, err: %q", err)
 		return -1, -1, domain.ErrInternal
 	}
+	ttl := a.conf.VerificationCodeTTL
+	err = a.cache.Put(ctx, email, vCode, ttl)
+	if errors.Is(err, domain.ErrAlreadyExists) {
+		log.Printf("SendCodeEmail: Already send code to %q", email)
+		return -1, -1, domain.ErrBadData
+	}
+	if err != nil {
+		log.Printf("SendCodeEmail: Trouble with Put, err: %q", err)
+		return -1, -1, domain.ErrInternal
+	}
 	err = a.pub.PublishEmailVerification(ctx, email, vCode)
 	if err != nil {
 		log.Printf("SendCodeEmail: Trouble with PublishEmailVerification, err: %q", err)
-		return -1, -1, domain.ErrInternal
-	}
-	ttl := a.conf.VerificationCodeTTL
-	err = a.cache.Put(ctx, email, vCode, ttl)
-	if err != nil {
-		if errors.Is(err, domain.ErrAlreadyExists) {
-			return -1, -1, domain.ErrBadData
+		delErr := a.cache.Del(ctx, email)
+		if delErr != nil {
+			log.Printf("SendCodeEmail: Trouble with Del after failed publish, err: %q", delErr)
 		}
-		log.Printf("SendCodeEmail: Trouble with Put, err: %q", err)
 		return -1, -1, domain.ErrInternal
 	}
 	seconds := int(ttl.Seconds())

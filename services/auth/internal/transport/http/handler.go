@@ -32,6 +32,7 @@ func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {
 	m.HandleFunc("POST /api/auth/register", h.Register)
 	m.HandleFunc("POST /api/auth/login", h.LogIn)
 	m.HandleFunc("POST /api/auth/update", h.Update)
+	m.HandleFunc("GET /healthz", h.Health)
 
 	m.Handle("GET /api/auth/account", h.a.Middleware(http.HandlerFunc(h.GetAccountInfo)))
 

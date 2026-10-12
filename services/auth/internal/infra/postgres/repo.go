@@ -76,7 +76,7 @@ func (p *PostagreRepo) IsUserExists(ctx context.Context, login string) error {
 		return betterError(err)
 	}
 	if isExists != 1 {
-		return ErrNotFound
+		return domain.ErrNotFound
 	}
 	return nil
 }
@@ -92,22 +92,13 @@ func (p *PostagreRepo) SaveRefresh(ctx context.Context, userId uuid.UUID, rToken
 	return nil
 }
 
-func (p *PostagreRepo) FindRefresh(ctx context.Context, userId uuid.UUID, rToken string) error {
-	var isFound int
-	err := p.pool.QueryRow(ctx, p.q.FindRefresh, userId, rToken).Scan(&isFound)
-	if err != nil {
-		return betterError(err)
-	}
-	return nil
-}
-
 func (p *PostagreRepo) DeleteRefresh(ctx context.Context, userId uuid.UUID, rToken string) error {
 	c, err := p.pool.Exec(ctx, p.q.DelRefresh, userId, rToken)
 	if err != nil {
-		return err
+		return betterError(err)
 	}
 	if c.RowsAffected() == 0 {
-		return fmt.Errorf("can't del refresh")
+		return domain.ErrNotFound
 	}
 	return nil
 }
@@ -115,7 +106,7 @@ func (p *PostagreRepo) DeleteRefresh(ctx context.Context, userId uuid.UUID, rTok
 func (p *PostagreRepo) DeleteExpiredRefreshTokens(ctx context.Context, userId uuid.UUID) error {
 	_, err := p.pool.Exec(ctx, p.q.ClrExpRefresh, userId)
 	if err != nil {
-		return err
+		return betterError(err)
 	}
 	return nil
 }

@@ -110,3 +110,7 @@ func (h *Handler) GetAccountInfo(w http.ResponseWriter, r *http.Request) {
 	resp := AccountInfoResponseBody{Login: info.Login, Email: info.Email}
 	utils.Send(w, &resp)
 }
+
+func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}

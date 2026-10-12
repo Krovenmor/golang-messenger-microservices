@@ -10,6 +10,7 @@ import (
 	"MyMessenger/services/auth/internal/domain"
 	"MyMessenger/services/auth/internal/service"
 	"context"
+	"errors"
 	"log"
 	"time"
 
@@ -47,16 +48,32 @@ func (c *BanChecker) CheckTokenBanned(ctx context.Context, rToken string) bool {
 
 func (c *BanChecker) banUser(ctx context.Context, userId uuid.UUID, ttl time.Duration) {
 	info, err := c.auth.GetUserTokens(ctx, userId)
+	if errors.Is(err, domain.ErrNotFound) {
+		c.banLoginOnly(ctx, userId, ttl)
+		return
+	}
 	if err != nil {
-		log.Printf("banUser: trouble with GetInfo(%q), err: %q", userId, err)
+		log.Printf("banUser: trouble with GetUserTokens(%q), err: %q", userId, err)
 		return
 	}
 	err = c.repoLogins.PutKey(ctx, info.Login, ttl)
 	if err != nil {
-		log.Printf("banUser: Trouble with repoLogins.Put(ctx, %v, %d)", userId, ttl)
+		log.Printf("banUser: Trouble with repoLogins.PutKey(ctx, %v, %d)", userId, ttl)
 	}
 	err = c.repoTokens.PutKeys(ctx, info.RTokens, ttl)
 	if err != nil {
-		log.Printf("banUser: Trouble with repoLogins.PutKeys(ctx, %v, %d)", info.RTokens, ttl)
+		log.Printf("banUser: Trouble with repoTokens.PutKeys(ctx, %v, %d)", info.RTokens, ttl)
+	}
+}
+
+func (c *BanChecker) banLoginOnly(ctx context.Context, userId uuid.UUID, ttl time.Duration) {
+	info, err := c.auth.GetUserInfo(ctx, userId)
+	if err != nil {
+		log.Printf("banLoginOnly: trouble with GetUserInfo(%q), err: %q", userId, err)
+		return
+	}
+	err = c.repoLogins.PutKey(ctx, info.Login, ttl)
+	if err != nil {
+		log.Printf("banLoginOnly: Trouble with repoLogins.PutKey(ctx, %v, %d)", userId, ttl)
 	}
 }

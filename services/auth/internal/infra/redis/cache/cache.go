@@ -5,7 +5,10 @@ import (
 	"MyMessenger/services/auth/internal/config"
 	"MyMessenger/services/auth/internal/domain"
 	"context"
+	"errors"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type RedisTtlCache struct {
@@ -17,14 +20,22 @@ func NewRedisTtlCache(rf *rr.RedisFactory, conf *config.RedisConfig) *RedisTtlCa
 }
 
 func (r *RedisTtlCache) Put(ctx context.Context, email, code string, ttl time.Duration) error {
-	if r.repo.IsExists(ctx, email) {
+	isPut, err := r.repo.PutValNX(ctx, email, code, ttl)
+	if err != nil {
+		return err
+	}
+	if !isPut {
 		return domain.ErrAlreadyExists
 	}
-	return r.repo.PutVal(ctx, email, code, ttl)
+	return nil
 }
 
 func (r *RedisTtlCache) Get(ctx context.Context, email string) (string, error) {
-	return r.repo.GetVal(ctx, email)
+	val, err := r.repo.GetVal(ctx, email)
+	if errors.Is(err, redis.Nil) {
+		return "", domain.ErrNotFound
+	}
+	return val, err
 }
 
 func (r *RedisTtlCache) Del(ctx context.Context, email string) error {
