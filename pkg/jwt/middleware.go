@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"MyMessenger/pkg/httpx"
 	"MyMessenger/pkg/logger"
 	"context"
 	"errors"
@@ -57,14 +58,14 @@ func (a *Authenticator) Middleware(h http.Handler) http.Handler {
 		token, err := GetBearerToken(r)
 		if err != nil {
 			a.log.Ctx(r.Context()).Debug("no bearer token", zap.Error(err))
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			httpx.WriteError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
 
 		claims, err := a.checker.IsValidAccess(token)
 		if err != nil {
 			a.log.Ctx(r.Context()).Debug("invalid access token", zap.Error(err))
-			http.Error(w, "Bad token", http.StatusUnauthorized)
+			httpx.WriteError(w, http.StatusUnauthorized, "invalid access token")
 			return
 		}
 
