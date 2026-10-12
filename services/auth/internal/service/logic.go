@@ -25,11 +25,18 @@ type JwtAuth struct {
 
 	cache AuthTTLCache
 	pub   Publisher
+	ban   BanStore
+
+	dummyHash string
 
 	log *logger.Logger
 }
 
-func NewJwtAuth(repo AuthRepo, cache AuthTTLCache, pub Publisher, checker TokenChecker, gen TokenGenerator, hash AuthHasher, conf *config.AuthConfig, log *logger.Logger) *JwtAuth {
+func NewJwtAuth(repo AuthRepo, cache AuthTTLCache, pub Publisher, ban BanStore, checker TokenChecker, gen TokenGenerator, hash AuthHasher, conf *config.AuthConfig, log *logger.Logger) (*JwtAuth, error) {
+	dummyHash, err := hash.Hash(uuid.NewString())
+	if err != nil {
+		return nil, err
+	}
 	return &JwtAuth{
 		repo:       repo,
 		conf:       conf,
@@ -39,9 +46,12 @@ func NewJwtAuth(repo AuthRepo, cache AuthTTLCache, pub Publisher, checker TokenC
 
 		cache: cache,
 		pub:   pub,
+		ban:   ban,
+
+		dummyHash: dummyHash,
 
 		log: log,
-	}
+	}, nil
 }
 
 func (a *JwtAuth) Register(ctx context.Context, login, password, email, code string) error {
@@ -60,15 +70,6 @@ func (a *JwtAuth) Register(ctx context.Context, login, password, email, code str
 	if rCode != code {
 		log.Debug("verification code mismatch")
 		return domain.ErrInvalidCode
-	}
-	err = a.repo.IsUserExists(ctx, login)
-	if err == nil {
-		log.Debug("user already exists")
-		return domain.ErrUserAlreadyExists
-	}
-	if !errors.Is(err, domain.ErrNotFound) {
-		log.Error("failed to check user existence", zap.Error(err))
-		return domain.ErrInternal
 	}
 	hashed, err := a.hash.Hash(password)
 	if err != nil {
@@ -121,6 +122,7 @@ func (a *JwtAuth) LogIn(ctx context.Context, login, password string) (*domain.To
 	userId, hashed, err := a.repo.GetUser(ctx, login)
 	if errors.Is(err, domain.ErrNotFound) {
 		log.Debug("user not found")
+		a.equalizeResponseTime(password)
 		return nil, domain.ErrInvalidCredentials
 	}
 	if err != nil {
@@ -137,6 +139,10 @@ func (a *JwtAuth) LogIn(ctx context.Context, login, password string) (*domain.To
 		log.Warn("failed to delete expired refresh tokens", zap.Stringer("user_id", userId), zap.Error(err))
 	}
 	return a.newTokens(ctx, userId)
+}
+
+func (a *JwtAuth) equalizeResponseTime(password string) {
+	_ = a.hash.Comp(password, a.dummyHash)
 }
 
 func (a *JwtAuth) UpdateTokens(ctx context.Context, rToken string) (*domain.Tokens, error) {
@@ -184,28 +190,24 @@ func (a *JwtAuth) GetUserInfo(ctx context.Context, userId uuid.UUID) (*domain.Us
 	return info, nil
 }
 
-func (a *JwtAuth) GetUserTokens(ctx context.Context, userId uuid.UUID) (*domain.UserTokens, error) {
-	return a.repo.GetUserTokens(ctx, userId)
-}
-
-func (a *JwtAuth) SendCodeEmail(ctx context.Context, email string) (int, int, error) {
+func (a *JwtAuth) SendCodeEmail(ctx context.Context, email string) (time.Duration, error) {
 	email = domain.NormalizeEmail(email)
 	log := a.log.Ctx(ctx).With(zap.String("email", email))
 
 	vCode, err := code.GenerateNewCode()
 	if err != nil {
 		log.Error("failed to generate verification code", zap.Error(err))
-		return -1, -1, domain.ErrInternal
+		return 0, domain.ErrInternal
 	}
 	ttl := a.conf.VerificationCodeTTL
 	err = a.cache.Put(ctx, email, vCode, ttl)
 	if errors.Is(err, domain.ErrAlreadyExists) {
 		log.Debug("verification code already sent")
-		return -1, -1, domain.ErrCodeAlreadySent
+		return 0, domain.ErrCodeAlreadySent
 	}
 	if err != nil {
 		log.Error("failed to save verification code", zap.Error(err))
-		return -1, -1, domain.ErrInternal
+		return 0, domain.ErrInternal
 	}
 	err = a.pub.PublishEmailVerification(ctx, email, vCode)
 	if err != nil {
@@ -214,8 +216,54 @@ func (a *JwtAuth) SendCodeEmail(ctx context.Context, email string) (int, int, er
 		if delErr != nil {
 			log.Warn("failed to delete verification code after failed publish", zap.Error(delErr))
 		}
-		return -1, -1, domain.ErrInternal
+		return 0, domain.ErrInternal
 	}
-	seconds := int(ttl.Seconds())
-	return seconds, seconds, nil
+	return ttl, nil
+}
+
+func (a *JwtAuth) BanUser(ctx context.Context, userId uuid.UUID, ttl time.Duration) error {
+	log := a.log.Ctx(ctx).With(zap.Stringer("user_id", userId), zap.Duration("ttl", ttl))
+
+	userTokens, err := a.repo.GetUserTokens(ctx, userId)
+	if errors.Is(err, domain.ErrNotFound) {
+		return a.banLoginOnly(ctx, log, userId, ttl)
+	}
+	if err != nil {
+		log.Error("failed to get user tokens for ban", zap.Error(err))
+		return domain.ErrInternal
+	}
+
+	loginErr := a.ban.BanLogin(ctx, userTokens.Login, ttl)
+	if loginErr != nil {
+		log.Error("failed to ban login", zap.Error(loginErr))
+	}
+	tokensErr := a.ban.BanTokens(ctx, userTokens.RTokens, ttl)
+	if tokensErr != nil {
+		log.Error("failed to ban refresh tokens", zap.Int("tokens", len(userTokens.RTokens)), zap.Error(tokensErr))
+	}
+	if loginErr != nil || tokensErr != nil {
+		return domain.ErrInternal
+	}
+
+	log.Info("user banned", zap.String("login", userTokens.Login), zap.Int("tokens", len(userTokens.RTokens)))
+	return nil
+}
+
+func (a *JwtAuth) banLoginOnly(ctx context.Context, log *zap.Logger, userId uuid.UUID, ttl time.Duration) error {
+	info, err := a.repo.GetUserInfo(ctx, userId)
+	if errors.Is(err, domain.ErrNotFound) {
+		log.Warn("user to ban not found")
+		return domain.ErrUserNotFound
+	}
+	if err != nil {
+		log.Error("failed to get user info for ban", zap.Error(err))
+		return domain.ErrInternal
+	}
+	err = a.ban.BanLogin(ctx, info.Login, ttl)
+	if err != nil {
+		log.Error("failed to ban login", zap.Error(err))
+		return domain.ErrInternal
+	}
+	log.Info("user banned without active tokens", zap.String("login", info.Login))
+	return nil
 }

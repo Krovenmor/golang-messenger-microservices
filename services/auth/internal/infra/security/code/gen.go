@@ -3,14 +3,18 @@ package code
 import (
 	"crypto/rand"
 	"fmt"
+	"math"
 	"math/big"
 )
 
+const codeLength = 6
+
+var codeUpperBound = big.NewInt(int64(math.Pow10(codeLength)))
+
 func GenerateNewCode() (string, error) {
-	bInt := big.NewInt(1000000)
-	n, err := rand.Int(rand.Reader, bInt)
+	n, err := rand.Int(rand.Reader, codeUpperBound)
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%06d", n.Int64()), nil
+	return fmt.Sprintf("%0*d", codeLength, n.Int64()), nil
 }

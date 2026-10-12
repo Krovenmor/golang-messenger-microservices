@@ -19,12 +19,13 @@ func (h *Handler) SendCode(w http.ResponseWriter, r *http.Request) {
 		h.writeError(w, r, err)
 		return
 	}
-	exp, retry, err := h.auth.SendCodeEmail(r.Context(), body.Email)
+	ttl, err := h.auth.SendCodeEmail(r.Context(), body.Email)
 	if err != nil {
 		h.writeError(w, r, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, SendCodeResponseBody{ExpiresIn: exp, RetryAfter: retry})
+	seconds := int(ttl.Seconds())
+	httpx.WriteJSON(w, http.StatusOK, SendCodeResponseBody{ExpiresIn: seconds, RetryAfter: seconds})
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {

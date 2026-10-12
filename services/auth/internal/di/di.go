@@ -16,6 +16,7 @@ import (
 	"MyMessenger/services/auth/internal/infra/security/ban"
 	"MyMessenger/services/auth/internal/infra/security/jwt"
 	"MyMessenger/services/auth/internal/service"
+	"MyMessenger/services/auth/internal/transport/event"
 	web "MyMessenger/services/auth/internal/transport/http"
 	"net/http"
 
@@ -105,6 +106,13 @@ func GetModule() fx.Option {
 				pub.NewPublisher,
 				fx.As(new(service.Publisher)),
 			),
+			// Ban store
+			provideRepoFabricFunc,
+			fx.Annotate(
+				ban.NewStore,
+				fx.As(new(service.BanStore)),
+				fx.As(new(web.BanChecker)),
+			),
 			// Service
 			fx.Annotate(
 				service.NewJwtAuth,
@@ -112,17 +120,15 @@ func GetModule() fx.Option {
 			),
 		),
 
-		// BanChecker
+		// Ban events
 		fx.Provide(
-			provideRepoFabricFunc,
 			fx.Annotate(
 				redispkg.NewRedisSubscriber,
-				fx.As(new(ban.Subscriber)),
+				fx.As(new(event.Subscriber)),
 			),
-			fx.Annotate(
-				ban.NewBanChecker,
-				fx.As(new(web.BanChecker)),
-			),
+		),
+		fx.Invoke(
+			event.RegisterBanConsumer,
 		),
 
 		// Handler
