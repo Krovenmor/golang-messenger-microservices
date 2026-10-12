@@ -51,7 +51,7 @@ func (a *JwtAuth) Register(ctx context.Context, login, password, email, code str
 	rCode, err := a.cache.Get(ctx, email)
 	if errors.Is(err, domain.ErrNotFound) {
 		log.Debug("no verification code for email")
-		return domain.ErrBadData
+		return domain.ErrInvalidCode
 	}
 	if err != nil {
 		log.Error("failed to get verification code", zap.Error(err))
@@ -59,12 +59,12 @@ func (a *JwtAuth) Register(ctx context.Context, login, password, email, code str
 	}
 	if rCode != code {
 		log.Debug("verification code mismatch")
-		return domain.ErrBadData
+		return domain.ErrInvalidCode
 	}
 	err = a.repo.IsUserExists(ctx, login)
 	if err == nil {
 		log.Debug("user already exists")
-		return domain.ErrBadData
+		return domain.ErrUserAlreadyExists
 	}
 	if !errors.Is(err, domain.ErrNotFound) {
 		log.Error("failed to check user existence", zap.Error(err))
@@ -79,7 +79,7 @@ func (a *JwtAuth) Register(ctx context.Context, login, password, email, code str
 	err = a.repo.AddNewUser(ctx, userId, login, hashed, email)
 	if errors.Is(err, domain.ErrAlreadyExists) {
 		log.Debug("login or email already taken")
-		return domain.ErrBadData
+		return domain.ErrUserAlreadyExists
 	}
 	if err != nil {
 		log.Error("failed to add user", zap.Error(err))
@@ -121,7 +121,7 @@ func (a *JwtAuth) LogIn(ctx context.Context, login, password string) (*domain.To
 	userId, hashed, err := a.repo.GetUser(ctx, login)
 	if errors.Is(err, domain.ErrNotFound) {
 		log.Debug("user not found")
-		return nil, domain.ErrBadData
+		return nil, domain.ErrInvalidCredentials
 	}
 	if err != nil {
 		log.Error("failed to get user", zap.Error(err))
@@ -130,7 +130,7 @@ func (a *JwtAuth) LogIn(ctx context.Context, login, password string) (*domain.To
 	err = a.hash.Comp(password, hashed)
 	if err != nil {
 		log.Debug("password mismatch", zap.Error(err))
-		return nil, domain.ErrBadData
+		return nil, domain.ErrInvalidCredentials
 	}
 	err = a.repo.DeleteExpiredRefreshTokens(ctx, userId)
 	if err != nil {
@@ -145,11 +145,11 @@ func (a *JwtAuth) UpdateTokens(ctx context.Context, rToken string) (*domain.Toke
 	claims, err := a.jwtChecker.IsValidToken(rToken)
 	if err != nil {
 		log.Debug("invalid refresh token", zap.Error(err))
-		return nil, domain.ErrBadData
+		return nil, domain.ErrInvalidToken
 	}
 	if claims.Ttype != j.Refresh {
 		log.Debug("token is not a refresh token", zap.String("type", string(claims.Ttype)))
-		return nil, domain.ErrBadData
+		return nil, domain.ErrInvalidToken
 	}
 	userId, err := uuid.Parse(claims.Subject)
 	if err != nil {
@@ -160,7 +160,7 @@ func (a *JwtAuth) UpdateTokens(ctx context.Context, rToken string) (*domain.Toke
 	err = a.repo.DeleteRefresh(ctx, userId, utils.Hash(rToken))
 	if errors.Is(err, domain.ErrNotFound) {
 		log.Debug("refresh token not found")
-		return nil, domain.ErrBadData
+		return nil, domain.ErrInvalidToken
 	}
 	if err != nil {
 		log.Error("failed to delete refresh token", zap.Error(err))
@@ -175,7 +175,7 @@ func (a *JwtAuth) GetUserInfo(ctx context.Context, userId uuid.UUID) (*domain.Us
 	info, err := a.repo.GetUserInfo(ctx, userId)
 	if errors.Is(err, domain.ErrNotFound) {
 		log.Debug("user not found")
-		return nil, domain.ErrBadData
+		return nil, domain.ErrUserNotFound
 	}
 	if err != nil {
 		log.Error("failed to get user info", zap.Error(err))
@@ -201,7 +201,7 @@ func (a *JwtAuth) SendCodeEmail(ctx context.Context, email string) (int, int, er
 	err = a.cache.Put(ctx, email, vCode, ttl)
 	if errors.Is(err, domain.ErrAlreadyExists) {
 		log.Debug("verification code already sent")
-		return -1, -1, domain.ErrBadData
+		return -1, -1, domain.ErrCodeAlreadySent
 	}
 	if err != nil {
 		log.Error("failed to save verification code", zap.Error(err))

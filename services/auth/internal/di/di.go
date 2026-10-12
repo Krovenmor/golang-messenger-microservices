@@ -60,10 +60,6 @@ func GetModule() fx.Option {
 			stdconfig.GetRedisChannelsConfig,
 		),
 
-		fx.Invoke(
-			config.SetupValidator,
-		),
-
 		// Pool
 		fx.Provide(
 			repo.NewPool,
@@ -137,6 +133,7 @@ func GetModule() fx.Option {
 				fx.As(new(web.Authenticator)),
 			),
 			http.NewServeMux,
+			web.NewValidator,
 			web.NewHandler,
 			(*web.Handler).RegisterRoutes,
 		),

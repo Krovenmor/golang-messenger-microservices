@@ -6,6 +6,8 @@ import (
 	"MyMessenger/services/auth/internal/service"
 	"context"
 	"net/http"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type BanChecker interface {
@@ -23,11 +25,12 @@ type Handler struct {
 
 	a Authenticator
 
-	log *logger.Logger
+	validate *validator.Validate
+	log      *logger.Logger
 }
 
-func NewHandler(auth service.AuthService, banChecker BanChecker, a Authenticator, log *logger.Logger) *Handler {
-	return &Handler{auth: auth, banChecker: banChecker, a: a, log: log}
+func NewHandler(auth service.AuthService, banChecker BanChecker, a Authenticator, validate *validator.Validate, log *logger.Logger) *Handler {
+	return &Handler{auth: auth, banChecker: banChecker, a: a, validate: validate, log: log}
 }
 
 func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {

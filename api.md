@@ -1,3 +1,15 @@
+# **Errors:**
+Errors are returned as JSON with `Content-Type: application/json`:
+```json
+{
+    "error": "error description"
+}
+```
+- 401 from endpoints protected by access token returns the same format (all services)
+- Request body validation errors: 400, `"invalid request body"` or `"invalid fields: login, password"`
+- Any internal error: 500, `"internal error"`
+- Auth API fully uses this format, other services are being migrated
+
 # **Auth API:**  
 ## **"POST /api/auth/send-code"** - send code to user email (needs for register)
 ### Request body:
@@ -10,9 +22,11 @@
 ```json
 {
     "expiresIn": 300,   // In seconds
-	"retryAfter": 60    // In seconds
+	"retryAfter": 300    // In seconds
 }  
 ```
+### Errors:
+- 400 `"verification code already sent"` - previous code for this email is still active
 
 ## **"POST /api/auth/register"** - register a new user  
 ### Request body:
@@ -25,6 +39,9 @@
 }  
 ```
 - On success code: 201
+### Errors:
+- 400 `"invalid verification code"` - no code was sent to this email, it expired or does not match
+- 400 `"login or email already taken"`
 
 ## **"POST /api/auth/login"** - LogIn, get JWT tokens  
 ### Request body:
@@ -41,6 +58,9 @@
     "refreshToken": "YourRefreshToken"
 }  
 ```
+### Errors:
+- 400 `"invalid login or password"`
+- 403 `"account is banned"`
 
 ## **"POST /api/auth/update"** - Update your tokens  
 ### Request body:
@@ -56,6 +76,10 @@
     "refreshToken": "YourNewRefreshToken"
 }  
 ```
+- Refresh token is single-use: after a successful update the old one is revoked
+### Errors:
+- 400 `"invalid refresh token"` - malformed, expired, already used or not a refresh token
+- 403 `"account is banned"`
 
 ## **"GET /api/auth/account"** - Get info about your account 
 - You must provide access token in Authorization
@@ -66,6 +90,8 @@
     "email": "user@email.com"
 }
 ```
+### Errors:
+- 400 `"user not found"`
 
 
 
