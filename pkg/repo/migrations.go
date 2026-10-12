@@ -5,11 +5,21 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+	"go.uber.org/zap"
 )
+
+type gooseLogger struct {
+	*zap.SugaredLogger
+}
+
+func (l gooseLogger) Printf(format string, v ...any) {
+	l.Infof(strings.TrimSuffix(format, "\n"), v...)
+}
 
 func MakeMigrations(pool *pgxpool.Pool, migrations *embed.FS) (err error) {
 	if pool == nil {
@@ -27,6 +37,7 @@ func MakeMigrations(pool *pgxpool.Pool, migrations *embed.FS) (err error) {
 		err = errors.Join(err, db.Close())
 	}()
 
+	goose.SetLogger(gooseLogger{zap.S()})
 	goose.SetBaseFS(*migrations)
 	err = goose.SetDialect("postgres")
 	if err != nil {
