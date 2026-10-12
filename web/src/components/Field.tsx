@@ -1,7 +1,9 @@
-import { useState, type InputHTMLAttributes } from 'react'
+import { useState, type InputHTMLAttributes, type ReactNode } from 'react'
 
 interface Props extends InputHTMLAttributes<HTMLInputElement> {
   label: string
+  error?: string | null
+  action?: ReactNode
 }
 
 function EyeIcon() {
@@ -26,32 +28,44 @@ function EyeOffIcon() {
   )
 }
 
-export function Field({ label, id, type, className, ...rest }: Props) {
+export function Field({ label, id, type, className, error, action, ...rest }: Props) {
   const isPassword = type === 'password'
   const [visible, setVisible] = useState(false)
+  const errorId = error && id ? `${id}-error` : undefined
+  const borderClass = error ? 'border-warn focus:border-warn' : 'border-line focus:border-signal'
 
   return (
     <label className="mb-4 block last:mb-0" htmlFor={id}>
       <span className="mb-1.5 block font-mono text-xs uppercase tracking-wide text-faint">{label}</span>
-      <div className="relative">
-        <input
-          id={id}
-          type={isPassword ? (visible ? 'text' : 'password') : type}
-          className={`w-full rounded-lg border border-line bg-raised px-3.5 py-2.5 text-sm text-ink placeholder:text-faint outline-none transition-colors focus:border-signal disabled:cursor-not-allowed disabled:opacity-50 ${isPassword ? 'pr-11' : ''} ${className ?? ''}`}
-          {...rest}
-        />
-        {isPassword && (
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={() => setVisible((v) => !v)}
-            aria-label={visible ? 'Скрыть пароль' : 'Показать пароль'}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-faint hover:bg-void hover:text-ink"
-          >
-            {visible ? <EyeOffIcon /> : <EyeIcon />}
-          </button>
-        )}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <input
+            id={id}
+            type={isPassword ? (visible ? 'text' : 'password') : type}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={errorId}
+            className={`w-full rounded-lg border bg-raised px-3.5 py-2.5 text-sm text-ink placeholder:text-faint outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${borderClass} ${isPassword ? 'pr-11' : ''} ${className ?? ''}`}
+            {...rest}
+          />
+          {isPassword && (
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={() => setVisible((v) => !v)}
+              aria-label={visible ? 'Скрыть пароль' : 'Показать пароль'}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-faint hover:bg-void hover:text-ink"
+            >
+              {visible ? <EyeOffIcon /> : <EyeIcon />}
+            </button>
+          )}
+        </div>
+        {action}
       </div>
+      {error && (
+        <span id={errorId} className="mt-1.5 block text-xs text-warn">
+          {error}
+        </span>
+      )}
     </label>
   )
 }

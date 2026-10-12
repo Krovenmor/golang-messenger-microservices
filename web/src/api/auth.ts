@@ -6,13 +6,22 @@ export interface SendCodeResult {
   retryAfter: number
 }
 
-export async function sendCode(email: string): Promise<SendCodeResult> {
-  const { data } = await apiClient.post<SendCodeResult>('/auth/send-code', { email })
+export interface StartRegistrationResult extends SendCodeResult {
+  registrationId: string
+}
+
+export async function startRegistration(login: string, password: string, email: string): Promise<StartRegistrationResult> {
+  const { data } = await apiClient.post<StartRegistrationResult>('/auth/register', { login, password, email })
   return data
 }
 
-export async function register(login: string, password: string, email: string, code: string): Promise<void> {
-  await apiClient.post('/auth/register', { login, password, email, code })
+export async function resendCode(registrationId: string): Promise<SendCodeResult> {
+  const { data } = await apiClient.post<SendCodeResult>('/auth/register/resend', { registrationId })
+  return data
+}
+
+export async function confirmRegistration(registrationId: string, code: string): Promise<void> {
+  await apiClient.post('/auth/register/confirm', { registrationId, code })
 }
 
 export async function login(login_: string, password: string): Promise<AuthTokens> {
