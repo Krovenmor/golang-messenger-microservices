@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 
 	"golang.org/x/crypto/argon2"
@@ -50,8 +49,7 @@ func (h *argon2idHasher) Hash(password string) (string, error) {
 	salt := make([]byte, h.SaltLength)
 	_, err := rand.Read(salt)
 	if err != nil {
-		log.Printf("Hash: trouble with rand.Read(salt), err: %q", err)
-		return "", ErrRandTrouble
+		return "", fmt.Errorf("%w: %w", ErrRandTrouble, err)
 	}
 
 	hash := argon2.IDKey(
@@ -77,33 +75,28 @@ func (h *argon2idHasher) Hash(password string) (string, error) {
 func (h *argon2idHasher) Comp(password, hash string) error {
 	parts := strings.Split(hash, "$")
 	if len(parts) != hashParts {
-		log.Printf("Comp: invalid hash, hash: %q", hash)
 		return ErrInvalidHash
 	}
 	var version int
 	_, err := fmt.Sscanf(parts[2], "v=%d", &version)
 	if err != nil || version != argon2.Version {
-		log.Printf("Comp: invalid version: %v, we have: %v", version, argon2.Version)
-		return ErrInvalidVersion
+		return fmt.Errorf("%w: got %d, want %d", ErrInvalidVersion, version, argon2.Version)
 	}
 
 	var mem, iter, par int
 	_, err = fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &mem, &iter, &par)
 	if err != nil {
-		log.Printf("Comp: invalid params, err: %q", err)
-		return ErrInvalidParams
+		return fmt.Errorf("%w: %w", ErrInvalidParams, err)
 	}
 
 	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
-		log.Printf("Comp: trouble with decoding salt, err: %q", err)
-		return ErrDecodingTrouble
+		return fmt.Errorf("%w: salt: %w", ErrDecodingTrouble, err)
 	}
 
 	decodedHash, err := base64.RawStdEncoding.DecodeString(parts[5])
 	if err != nil {
-		log.Printf("Comp: trouble with decoding hash, err: %q", err)
-		return ErrDecodingTrouble
+		return fmt.Errorf("%w: hash: %w", ErrDecodingTrouble, err)
 	}
 
 	KeyLength := uint32(len(decodedHash))

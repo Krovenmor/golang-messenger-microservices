@@ -4,8 +4,9 @@ import (
 	"MyMessenger/pkg/utils"
 	"MyMessenger/services/auth/internal/domain"
 	"errors"
-	"log"
 	"net/http"
+
+	"go.uber.org/zap"
 )
 
 func sendTokens(w http.ResponseWriter, tokens *domain.Tokens) {
@@ -20,7 +21,6 @@ func (h *Handler) ToStatusCode(err error) int {
 	case errors.Is(err, domain.ErrInternal):
 		return http.StatusInternalServerError
 	default:
-		log.Printf("ToStatusCode: not known error: %q", err)
 		return http.StatusBadRequest
 	}
 }
@@ -57,13 +57,12 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) LogIn(w http.ResponseWriter, r *http.Request) {
 	body, err := utils.Recv[LoginRequestBody](r)
 	if err != nil {
-		log.Printf("utils.Recv err: %q", err)
 		http.Error(w, err.Error(), h.ToStatusCode(err))
 		return
 	}
 	ctx := r.Context()
 	if h.banChecker.CheckLoginBanned(ctx, body.Login) {
-		log.Printf("LogIn: banned login: %q", body.Login)
+		h.log.Ctx(ctx).Info("login attempt with banned login", zap.String("login", body.Login))
 		http.Error(w, "", http.StatusBadRequest)
 		return
 	}
@@ -83,7 +82,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	if h.banChecker.CheckTokenBanned(ctx, body.RToken) {
-		log.Printf("Update: banned token")
+		h.log.Ctx(ctx).Info("tokens update with banned refresh token")
 		http.Error(w, "", http.StatusBadRequest)
 		return
 	}
@@ -98,7 +97,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetAccountInfo(w http.ResponseWriter, r *http.Request) {
 	userId, err := utils.GetUuidFromContext(r)
 	if err != nil {
-		log.Printf("GetAccountInfo: Trouble with GetUuidFromContext, err: %q", err)
+		h.log.Ctx(r.Context()).Error("failed to get user id from context", zap.Error(err))
 		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}

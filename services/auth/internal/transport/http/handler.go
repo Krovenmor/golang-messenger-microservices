@@ -1,9 +1,10 @@
 package http
 
 import (
+	"MyMessenger/pkg/di"
+	"MyMessenger/pkg/logger"
 	"MyMessenger/services/auth/internal/service"
 	"context"
-	"log"
 	"net/http"
 )
 
@@ -21,10 +22,12 @@ type Handler struct {
 	banChecker BanChecker
 
 	a Authenticator
+
+	log *logger.Logger
 }
 
-func NewHandler(auth service.AuthService, banChecker BanChecker, a Authenticator) *Handler {
-	return &Handler{auth: auth, banChecker: banChecker, a: a}
+func NewHandler(auth service.AuthService, banChecker BanChecker, a Authenticator, log *logger.Logger) *Handler {
+	return &Handler{auth: auth, banChecker: banChecker, a: a, log: log}
 }
 
 func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {
@@ -32,12 +35,9 @@ func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {
 	m.HandleFunc("POST /api/auth/register", h.Register)
 	m.HandleFunc("POST /api/auth/login", h.LogIn)
 	m.HandleFunc("POST /api/auth/update", h.Update)
-	m.HandleFunc("GET /healthz", h.Health)
+	m.HandleFunc("GET "+di.HealthPath, h.Health)
 
 	m.Handle("GET /api/auth/account", h.a.Middleware(http.HandlerFunc(h.GetAccountInfo)))
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Income request: %q", r.URL.Path)
-		m.ServeHTTP(w, r)
-	})
+	return m
 }

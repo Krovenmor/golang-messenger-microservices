@@ -43,6 +43,8 @@ func provideRepoFabricFunc(f *rr.RedisFactory) func(prefix string) ban.Middlewar
 
 func GetModule() fx.Option {
 	return fx.Options(
+		di.LoggerModule(appPrefix),
+		di.TracingModule(appPrefix),
 
 		di.JwtCheckerModule,
 		di.RedisClientModule,

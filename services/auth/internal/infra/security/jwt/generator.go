@@ -5,7 +5,6 @@ import (
 	"MyMessenger/services/auth/internal/config"
 	"crypto/ed25519"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -19,12 +18,11 @@ type jwtGenerator struct {
 func GetNewJwtGenerator(conf *config.AuthConfig) (*jwtGenerator, error) {
 	prvKey, err := jwt.ParseEdPrivateKeyFromPEM(conf.PrvKey)
 	if err != nil {
-		log.Printf("GetNewJwtGenerator(): Trouble with parsing prvKey: %q", err.Error())
-		return nil, err
+		return nil, fmt.Errorf("parse private key: %w", err)
 	}
 	edKey, ok := prvKey.(ed25519.PrivateKey)
 	if !ok {
-		return nil, fmt.Errorf("GetNewJwtGenerator: key is not of type ed25519.PrivateKey")
+		return nil, fmt.Errorf("private key is not of type ed25519.PrivateKey")
 	}
 	return &jwtGenerator{prvKey: edKey}, nil
 }
