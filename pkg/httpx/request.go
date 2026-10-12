@@ -11,8 +11,9 @@ import (
 )
 
 type DecodeError struct {
-	msg   string
-	cause error
+	msg    string
+	fields Fields
+	cause  error
 }
 
 func (e *DecodeError) Error() string {
@@ -21,6 +22,21 @@ func (e *DecodeError) Error() string {
 
 func (e *DecodeError) Unwrap() error {
 	return e.cause
+}
+
+func (e *DecodeError) Fields() Fields {
+	return e.fields
+}
+
+func NewValidator() *validator.Validate {
+	v := validator.New()
+	v.RegisterTagNameFunc(jsonTagName)
+	return v
+}
+
+func jsonTagName(field reflect.StructField) string {
+	name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+	return name
 }
 
 func DecodeJSON[T any](r *http.Request, v *validator.Validate) (*T, error) {
@@ -33,31 +49,19 @@ func DecodeJSON[T any](r *http.Request, v *validator.Validate) (*T, error) {
 	}
 	err = v.Struct(&val)
 	if err != nil {
-		return nil, &DecodeError{msg: validationMessage[T](err), cause: err}
+		return nil, validationError(err)
 	}
 	return &val, nil
 }
 
-func validationMessage[T any](err error) string {
+func validationError(err error) *DecodeError {
 	var fieldErrs validator.ValidationErrors
 	if !errors.As(err, &fieldErrs) {
-		return "invalid request body"
+		return &DecodeError{msg: "invalid request body", cause: err}
 	}
-	fields := make([]string, 0, len(fieldErrs))
+	fields := make(Fields, len(fieldErrs))
 	for _, fe := range fieldErrs {
-		fields = append(fields, jsonFieldName[T](fe.StructField()))
+		fields[fe.Field()] = FieldError{Reason: fe.ActualTag(), Param: fe.Param()}
 	}
-	return "invalid fields: " + strings.Join(fields, ", ")
-}
-
-func jsonFieldName[T any](structField string) string {
-	sf, ok := reflect.TypeFor[T]().FieldByName(structField)
-	if !ok {
-		return structField
-	}
-	name, _, _ := strings.Cut(sf.Tag.Get("json"), ",")
-	if name == "" || name == "-" {
-		return structField
-	}
-	return name
+	return &DecodeError{msg: "invalid fields", fields: fields, cause: err}
 }

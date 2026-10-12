@@ -7,8 +7,16 @@ import (
 	"go.uber.org/zap"
 )
 
+type FieldError struct {
+	Reason string `json:"reason"`
+	Param  string `json:"param,omitempty"`
+}
+
+type Fields map[string]FieldError
+
 type ErrorResponse struct {
-	Error string `json:"error"`
+	Error  string `json:"error"`
+	Fields Fields `json:"fields,omitempty"`
 }
 
 func WriteJSON(w http.ResponseWriter, status int, body any) {
@@ -22,4 +30,8 @@ func WriteJSON(w http.ResponseWriter, status int, body any) {
 
 func WriteError(w http.ResponseWriter, status int, msg string) {
 	WriteJSON(w, status, ErrorResponse{Error: msg})
+}
+
+func WriteFieldsError(w http.ResponseWriter, status int, msg string, fields Fields) {
+	WriteJSON(w, status, ErrorResponse{Error: msg, Fields: fields})
 }

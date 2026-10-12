@@ -1,6 +1,7 @@
 package http
 
 import (
+	"MyMessenger/pkg/httpx"
 	"MyMessenger/services/auth/internal/config"
 	"fmt"
 
@@ -9,7 +10,7 @@ import (
 )
 
 func NewValidator(conf *config.ValidationConfig) (*validator.Validate, error) {
-	v := validator.New()
+	v := httpx.NewValidator()
 	err := v.RegisterValidation("notblank", validators.NotBlank)
 	if err != nil {
 		return nil, err

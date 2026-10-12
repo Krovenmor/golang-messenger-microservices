@@ -12,10 +12,17 @@ import (
 var badRequestErrors = []error{
 	domain.ErrInvalidCode,
 	domain.ErrCodeAlreadySent,
-	domain.ErrUserAlreadyExists,
+	domain.ErrLoginTaken,
+	domain.ErrEmailTaken,
 	domain.ErrInvalidCredentials,
 	domain.ErrInvalidToken,
 	domain.ErrUserNotFound,
+}
+
+var errorFields = map[error]httpx.Fields{
+	domain.ErrInvalidCode: {"code": {Reason: "invalid"}},
+	domain.ErrLoginTaken:  {"login": {Reason: "taken"}},
+	domain.ErrEmailTaken:  {"email": {Reason: "taken"}},
 }
 
 func statusOf(err error) int {
@@ -34,10 +41,23 @@ func statusOf(err error) int {
 	return http.StatusInternalServerError
 }
 
+func fieldsOf(err error) httpx.Fields {
+	var decodeErr *httpx.DecodeError
+	if errors.As(err, &decodeErr) {
+		return decodeErr.Fields()
+	}
+	for target, fields := range errorFields {
+		if errors.Is(err, target) {
+			return fields
+		}
+	}
+	return nil
+}
+
 func (h *Handler) writeError(w http.ResponseWriter, r *http.Request, err error) {
 	status := statusOf(err)
 	if status != http.StatusInternalServerError {
-		httpx.WriteError(w, status, err.Error())
+		httpx.WriteFieldsError(w, status, err.Error(), fieldsOf(err))
 		return
 	}
 	if !errors.Is(err, domain.ErrInternal) {

@@ -78,9 +78,9 @@ func (a *JwtAuth) Register(ctx context.Context, login, password, email, code str
 	}
 	userId := uuid.New()
 	err = a.repo.AddNewUser(ctx, userId, login, hashed, email)
-	if errors.Is(err, domain.ErrAlreadyExists) {
-		log.Debug("login or email already taken")
-		return domain.ErrUserAlreadyExists
+	if errors.Is(err, domain.ErrLoginTaken) || errors.Is(err, domain.ErrEmailTaken) {
+		log.Debug("registration rejected", zap.Error(err))
+		return err
 	}
 	if err != nil {
 		log.Error("failed to add user", zap.Error(err))
