@@ -11,6 +11,7 @@ type AuthConfig struct {
 	RefreshTokenTTL time.Duration `env:"JWT_REFRESH_TTL"`
 
 	VerificationCodeTTL time.Duration `env:"VERIFICATION_CODES_TTL"`
+	RegistrationTTL     time.Duration `env:"REGISTRATION_TTL"`
 }
 
 type HashConfig struct {
@@ -25,7 +26,9 @@ type RedisConfig struct {
 	RepoLoginPrefix string `env:"BAN_REPO_LOGIN_PREFIX"`
 	RepoTokenPrefix string `env:"BAN_REPO_TOKEN_PREFIX"`
 
-	CacheTTLPrefix string `env:"CACHE_TTL_PREFIX"`
+	RegistrationPrefix     string `env:"REGISTRATION_PREFIX"`
+	RegistrationCodePrefix string `env:"REGISTRATION_CODE_PREFIX"`
+	CodeCooldownPrefix     string `env:"CODE_COOLDOWN_PREFIX"`
 }
 
 type ValidationConfig struct {

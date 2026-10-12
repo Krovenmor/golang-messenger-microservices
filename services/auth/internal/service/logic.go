@@ -6,7 +6,6 @@ import (
 	"MyMessenger/pkg/utils"
 	"MyMessenger/services/auth/internal/config"
 	"MyMessenger/services/auth/internal/domain"
-	"MyMessenger/services/auth/internal/infra/security/code"
 	"context"
 	"errors"
 	"time"
@@ -23,16 +22,16 @@ type JwtAuth struct {
 	gen        TokenGenerator
 	hash       AuthHasher
 
-	cache AuthTTLCache
-	pub   Publisher
-	ban   BanStore
+	registrations RegistrationStore
+	pub           Publisher
+	ban           BanStore
 
 	dummyHash string
 
 	log *logger.Logger
 }
 
-func NewJwtAuth(repo AuthRepo, cache AuthTTLCache, pub Publisher, ban BanStore, checker TokenChecker, gen TokenGenerator, hash AuthHasher, conf *config.AuthConfig, log *logger.Logger) (*JwtAuth, error) {
+func NewJwtAuth(repo AuthRepo, registrations RegistrationStore, pub Publisher, ban BanStore, checker TokenChecker, gen TokenGenerator, hash AuthHasher, conf *config.AuthConfig, log *logger.Logger) (*JwtAuth, error) {
 	dummyHash, err := hash.Hash(uuid.NewString())
 	if err != nil {
 		return nil, err
@@ -44,54 +43,14 @@ func NewJwtAuth(repo AuthRepo, cache AuthTTLCache, pub Publisher, ban BanStore, 
 		gen:        gen,
 		hash:       hash,
 
-		cache: cache,
-		pub:   pub,
-		ban:   ban,
+		registrations: registrations,
+		pub:           pub,
+		ban:           ban,
 
 		dummyHash: dummyHash,
 
 		log: log,
 	}, nil
-}
-
-func (a *JwtAuth) Register(ctx context.Context, login, password, email, code string) error {
-	login, email = domain.NormalizeLogin(login), domain.NormalizeEmail(email)
-	log := a.log.Ctx(ctx).With(zap.String("login", login), zap.String("email", email))
-
-	rCode, err := a.cache.Get(ctx, email)
-	if errors.Is(err, domain.ErrNotFound) {
-		log.Debug("no verification code for email")
-		return domain.ErrInvalidCode
-	}
-	if err != nil {
-		log.Error("failed to get verification code", zap.Error(err))
-		return domain.ErrInternal
-	}
-	if rCode != code {
-		log.Debug("verification code mismatch")
-		return domain.ErrInvalidCode
-	}
-	hashed, err := a.hash.Hash(password)
-	if err != nil {
-		log.Error("failed to hash password", zap.Error(err))
-		return domain.ErrInternal
-	}
-	userId := uuid.New()
-	err = a.repo.AddNewUser(ctx, userId, login, hashed, email)
-	if errors.Is(err, domain.ErrLoginTaken) || errors.Is(err, domain.ErrEmailTaken) {
-		log.Debug("registration rejected", zap.Error(err))
-		return err
-	}
-	if err != nil {
-		log.Error("failed to add user", zap.Error(err))
-		return domain.ErrInternal
-	}
-	err = a.cache.Del(ctx, email)
-	if err != nil {
-		log.Warn("failed to delete verification code", zap.Error(err))
-	}
-	log.Info("user registered", zap.Stringer("user_id", userId))
-	return nil
 }
 
 func (a *JwtAuth) newTokens(ctx context.Context, userId uuid.UUID) (*domain.Tokens, error) {
@@ -188,37 +147,6 @@ func (a *JwtAuth) GetUserInfo(ctx context.Context, userId uuid.UUID) (*domain.Us
 		return nil, domain.ErrInternal
 	}
 	return info, nil
-}
-
-func (a *JwtAuth) SendCodeEmail(ctx context.Context, email string) (time.Duration, error) {
-	email = domain.NormalizeEmail(email)
-	log := a.log.Ctx(ctx).With(zap.String("email", email))
-
-	vCode, err := code.GenerateNewCode()
-	if err != nil {
-		log.Error("failed to generate verification code", zap.Error(err))
-		return 0, domain.ErrInternal
-	}
-	ttl := a.conf.VerificationCodeTTL
-	err = a.cache.Put(ctx, email, vCode, ttl)
-	if errors.Is(err, domain.ErrAlreadyExists) {
-		log.Debug("verification code already sent")
-		return 0, domain.ErrCodeAlreadySent
-	}
-	if err != nil {
-		log.Error("failed to save verification code", zap.Error(err))
-		return 0, domain.ErrInternal
-	}
-	err = a.pub.PublishEmailVerification(ctx, email, vCode)
-	if err != nil {
-		log.Error("failed to publish email verification", zap.Error(err))
-		delErr := a.cache.Del(ctx, email)
-		if delErr != nil {
-			log.Warn("failed to delete verification code after failed publish", zap.Error(delErr))
-		}
-		return 0, domain.ErrInternal
-	}
-	return ttl, nil
 }
 
 func (a *JwtAuth) BanUser(ctx context.Context, userId uuid.UUID, ttl time.Duration) error {

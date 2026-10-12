@@ -9,9 +9,10 @@ import (
 )
 
 type AuthService interface {
-	SendCodeEmail(ctx context.Context, email string) (time.Duration, error)
+	StartRegistration(ctx context.Context, login, password, email string) (uuid.UUID, time.Duration, error)
+	ResendCode(ctx context.Context, registrationId uuid.UUID) (time.Duration, error)
+	ConfirmRegistration(ctx context.Context, registrationId uuid.UUID, code string) error
 
-	Register(ctx context.Context, login, password, email, code string) error
 	LogIn(ctx context.Context, login, password string) (*domain.Tokens, error)
 	GetUserInfo(ctx context.Context, userId uuid.UUID) (*domain.UserInfo, error)
 

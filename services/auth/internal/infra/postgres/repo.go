@@ -43,6 +43,15 @@ func (p *PostgresRepo) GetUser(ctx context.Context, login string) (uuid.UUID, st
 	return userId, password, nil
 }
 
+func (p *PostgresRepo) CheckTaken(ctx context.Context, login, email string) (bool, bool, error) {
+	var loginTaken, emailTaken bool
+	err := p.pool.QueryRow(ctx, queries.CheckTaken, login, email).Scan(&loginTaken, &emailTaken)
+	if err != nil {
+		return false, false, betterError(err)
+	}
+	return loginTaken, emailTaken, nil
+}
+
 func (p *PostgresRepo) GetUserTokens(ctx context.Context, userId uuid.UUID) (*domain.UserTokens, error) {
 	var info domain.UserTokens
 	err := p.pool.QueryRow(ctx, queries.GetUserTokens, userId).Scan(&info.Login, &info.RTokens)

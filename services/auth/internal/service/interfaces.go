@@ -12,6 +12,7 @@ import (
 type AuthRepo interface {
 	AddNewUser(ctx context.Context, userId uuid.UUID, login, password, email string) error
 	GetUser(ctx context.Context, login string) (uuid.UUID, string, error)
+	CheckTaken(ctx context.Context, login, email string) (bool, bool, error)
 	GetUserInfo(ctx context.Context, userId uuid.UUID) (*domain.UserInfo, error)
 
 	GetUserTokens(ctx context.Context, userId uuid.UUID) (*domain.UserTokens, error)
@@ -21,14 +22,21 @@ type AuthRepo interface {
 	DeleteExpiredRefreshTokens(ctx context.Context, userId uuid.UUID) error
 }
 
-type AuthTTLCache interface {
-	Put(ctx context.Context, email, code string, ttl time.Duration) error
-	Get(ctx context.Context, email string) (string, error)
-	Del(ctx context.Context, email string) error
+type RegistrationStore interface {
+	Save(ctx context.Context, reg *domain.Registration, ttl time.Duration) error
+	Get(ctx context.Context, id uuid.UUID) (*domain.Registration, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+
+	SaveCode(ctx context.Context, id uuid.UUID, code string, ttl time.Duration) error
+	GetCode(ctx context.Context, id uuid.UUID) (string, error)
+
+	StartCooldown(ctx context.Context, email string, ttl time.Duration) error
+	StopCooldown(ctx context.Context, email string) error
 }
 
 type Publisher interface {
 	PublishEmailVerification(ctx context.Context, email, code string) error
+	PublishRegistrationAttempt(ctx context.Context, email string) error
 }
 
 type BanStore interface {

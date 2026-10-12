@@ -9,6 +9,9 @@ var (
 	//go:embed get_user.sql
 	GetUser string
 
+	//go:embed check_taken.sql
+	CheckTaken string
+
 	//go:embed get_user_info.sql
 	GetUserInfo string
 

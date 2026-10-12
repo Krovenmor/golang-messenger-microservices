@@ -10,8 +10,8 @@ import (
 	"MyMessenger/services/auth/internal/config"
 	"MyMessenger/services/auth/internal/infra/postgres"
 	"MyMessenger/services/auth/internal/infra/postgres/migrations"
-	"MyMessenger/services/auth/internal/infra/redis/cache"
 	"MyMessenger/services/auth/internal/infra/redis/pub"
+	"MyMessenger/services/auth/internal/infra/redis/registration"
 	"MyMessenger/services/auth/internal/infra/security/argon2id"
 	"MyMessenger/services/auth/internal/infra/security/ban"
 	"MyMessenger/services/auth/internal/infra/security/jwt"
@@ -95,10 +95,10 @@ func GetModule() fx.Option {
 				argon2id.NewArgon2idHasher,
 				fx.As(new(service.AuthHasher)),
 			),
-			// TTLCache
+			// Registration store
 			fx.Annotate(
-				cache.NewRedisTtlCache,
-				fx.As(new(service.AuthTTLCache)),
+				registration.NewStore,
+				fx.As(new(service.RegistrationStore)),
 			),
 			// Publisher
 			redispkg.NewRedisPublisher,

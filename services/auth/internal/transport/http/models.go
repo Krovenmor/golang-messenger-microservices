@@ -4,15 +4,19 @@ package http
 //	Requests
 //
 
-type SendCodeRequestBody struct {
-	Email string `json:"email" validate:"required,email"`
-}
-
-type RegisterRequestBody struct {
+type StartRegistrationRequestBody struct {
 	Login    string `json:"login" validate:"auth_login"`
 	Password string `json:"password" validate:"auth_password"`
 	Email    string `json:"email" validate:"required,email"`
-	Code     string `json:"code" validate:"required,len=6"`
+}
+
+type ConfirmRegistrationRequestBody struct {
+	RegistrationId string `json:"registrationId" validate:"required,uuid"`
+	Code           string `json:"code" validate:"required,len=6,numeric"`
+}
+
+type ResendCodeRequestBody struct {
+	RegistrationId string `json:"registrationId" validate:"required,uuid"`
 }
 
 type LoginRequestBody struct {
@@ -27,6 +31,12 @@ type TokensUpdateRequestBody struct {
 //
 //	Responses
 //
+
+type StartRegistrationResponseBody struct {
+	RegistrationId string `json:"registrationId"`
+	ExpiresIn      int    `json:"expiresIn"`
+	RetryAfter     int    `json:"retryAfter"`
+}
 
 type SendCodeResponseBody struct {
 	ExpiresIn  int `json:"expiresIn"`

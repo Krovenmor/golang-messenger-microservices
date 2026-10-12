@@ -34,8 +34,9 @@ func NewHandler(auth service.AuthService, banChecker BanChecker, a Authenticator
 }
 
 func (h *Handler) RegisterRoutes(m *http.ServeMux) http.Handler {
-	m.HandleFunc("POST /api/auth/send-code", h.SendCode)
-	m.HandleFunc("POST /api/auth/register", h.Register)
+	m.HandleFunc("POST /api/auth/register", h.StartRegistration)
+	m.HandleFunc("POST /api/auth/register/confirm", h.ConfirmRegistration)
+	m.HandleFunc("POST /api/auth/register/resend", h.ResendCode)
 	m.HandleFunc("POST /api/auth/login", h.LogIn)
 	m.HandleFunc("POST /api/auth/update", h.Update)
 	m.HandleFunc("GET "+di.HealthPath, h.Health)

@@ -26,3 +26,11 @@ func (p *publisher) PublishEmailVerification(ctx context.Context, email, code st
 	}
 	return p.pub.PublishEvent(ctx, p.channel, event)
 }
+
+func (p *publisher) PublishRegistrationAttempt(ctx context.Context, email string) error {
+	event := broker.Event{
+		Type:    broker.RegistrationAttemptType,
+		Payload: broker.RegistrationAttemptPayload{Email: email},
+	}
+	return p.pub.PublishEvent(ctx, p.channel, event)
+}

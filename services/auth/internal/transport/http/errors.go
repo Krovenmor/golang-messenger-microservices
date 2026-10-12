@@ -10,6 +10,7 @@ import (
 )
 
 var badRequestErrors = []error{
+	domain.ErrRegistrationNotFound,
 	domain.ErrInvalidCode,
 	domain.ErrCodeAlreadySent,
 	domain.ErrLoginTaken,
