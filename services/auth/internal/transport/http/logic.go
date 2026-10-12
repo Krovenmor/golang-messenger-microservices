@@ -2,22 +2,22 @@ package http
 
 import (
 	"MyMessenger/pkg/utils"
-	"MyMessenger/services/auth/internal/service"
+	"MyMessenger/services/auth/internal/domain"
 	"errors"
 	"log"
 	"net/http"
 )
 
-func sendTokens(w http.ResponseWriter, tokens *service.Tokens) {
+func sendTokens(w http.ResponseWriter, tokens *domain.Tokens) {
 	tB := TokensResponseBody{AToken: tokens.AccessToken, RToken: tokens.RefreshToken}
 	utils.Send(w, &tB)
 }
 
 func (h *Handler) ToStatusCode(err error) int {
 	switch {
-	case errors.Is(err, service.ErrBadData):
+	case errors.Is(err, domain.ErrBadData):
 		return http.StatusBadRequest
-	case errors.Is(err, service.ErrInternal):
+	case errors.Is(err, domain.ErrInternal):
 		return http.StatusInternalServerError
 	default:
 		log.Printf("ToStatusCode: not known error: %q", err)

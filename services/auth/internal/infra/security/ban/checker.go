@@ -5,9 +5,9 @@ import (
 	stdconf "MyMessenger/pkg/config"
 	"MyMessenger/pkg/redis/reader"
 	"MyMessenger/pkg/utils"
-	"strings"
 
 	"MyMessenger/services/auth/internal/config"
+	"MyMessenger/services/auth/internal/domain"
 	"MyMessenger/services/auth/internal/service"
 	"context"
 	"log"
@@ -38,7 +38,7 @@ func NewBanChecker(lf fx.Lifecycle, repoFab func(prefix string) MiddlewareRepo, 
 }
 
 func (c *BanChecker) CheckLoginBanned(ctx context.Context, login string) bool {
-	return c.repoLogins.IsExists(ctx, strings.ToLower(login))
+	return c.repoLogins.IsExists(ctx, domain.NormalizeLogin(login))
 }
 
 func (c *BanChecker) CheckTokenBanned(ctx context.Context, rToken string) bool {

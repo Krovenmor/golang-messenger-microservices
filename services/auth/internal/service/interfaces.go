@@ -2,6 +2,7 @@ package service
 
 import (
 	j "MyMessenger/pkg/jwt"
+	"MyMessenger/services/auth/internal/domain"
 	"context"
 	"time"
 
@@ -11,10 +12,10 @@ import (
 type AuthRepo interface {
 	AddNewUser(ctx context.Context, userId uuid.UUID, login, password, email string) error
 	GetUser(ctx context.Context, login string) (uuid.UUID, string, error)
-	GetUserInfo(ctx context.Context, userId uuid.UUID) (*UserInfo, error)
+	GetUserInfo(ctx context.Context, userId uuid.UUID) (*domain.UserInfo, error)
 	IsUserExists(ctx context.Context, login string) error
 
-	GetUserTokens(ctx context.Context, userId uuid.UUID) (*UserTokens, error)
+	GetUserTokens(ctx context.Context, userId uuid.UUID) (*domain.UserTokens, error)
 	SaveRefresh(ctx context.Context, userId uuid.UUID, rToken string, expAt time.Time) error
 	FindRefresh(ctx context.Context, userId uuid.UUID, rToken string) error
 

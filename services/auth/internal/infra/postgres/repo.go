@@ -1,8 +1,8 @@
 package postgres
 
 import (
+	"MyMessenger/services/auth/internal/domain"
 	"MyMessenger/services/auth/internal/infra/postgres/queries"
-	"MyMessenger/services/auth/internal/service"
 	"context"
 	"fmt"
 	"time"
@@ -51,8 +51,8 @@ func (p *PostagreRepo) GetUser(ctx context.Context, login string) (uuid.UUID, st
 	return userId, password, nil
 }
 
-func (p *PostagreRepo) GetUserTokens(ctx context.Context, userId uuid.UUID) (*service.UserTokens, error) {
-	var info service.UserTokens
+func (p *PostagreRepo) GetUserTokens(ctx context.Context, userId uuid.UUID) (*domain.UserTokens, error) {
+	var info domain.UserTokens
 	err := p.pool.QueryRow(ctx, p.q.GetUserTokens, userId).Scan(&info.Login, &info.RTokens)
 	if err != nil {
 		return nil, betterError(err)
@@ -60,8 +60,8 @@ func (p *PostagreRepo) GetUserTokens(ctx context.Context, userId uuid.UUID) (*se
 	return &info, nil
 }
 
-func (p *PostagreRepo) GetUserInfo(ctx context.Context, userId uuid.UUID) (*service.UserInfo, error) {
-	var info service.UserInfo
+func (p *PostagreRepo) GetUserInfo(ctx context.Context, userId uuid.UUID) (*domain.UserInfo, error) {
+	var info domain.UserInfo
 	err := p.pool.QueryRow(ctx, p.q.GetUserInfo, userId).Scan(&info.Login, &info.Email)
 	if err != nil {
 		return nil, betterError(err)

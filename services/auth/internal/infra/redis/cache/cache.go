@@ -3,7 +3,7 @@ package cache
 import (
 	rr "MyMessenger/pkg/redis/redis_repo"
 	"MyMessenger/services/auth/internal/config"
-	"MyMessenger/services/auth/internal/service"
+	"MyMessenger/services/auth/internal/domain"
 	"context"
 	"time"
 )
@@ -18,7 +18,7 @@ func NewRedisTtlCache(rf *rr.RedisFactory, conf *config.RedisConfig) *RedisTtlCa
 
 func (r *RedisTtlCache) Put(ctx context.Context, email, code string, ttl time.Duration) error {
 	if r.repo.IsExists(ctx, email) {
-		return service.ErrAlreadyExists
+		return domain.ErrAlreadyExists
 	}
 	return r.repo.PutVal(ctx, email, code, ttl)
 }
