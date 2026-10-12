@@ -1,53 +1,29 @@
 package queries
 
-import (
-	"embed"
-)
+import _ "embed"
 
-//go:embed *.sql
-var EmbedQueries embed.FS
+var (
+	//go:embed add_user.sql
+	AddUser string
 
-func getQuery(queryName string) (string, error) {
-	file, err := EmbedQueries.ReadFile(queryName)
-	if err != nil {
-		return "", err
-	}
-	return string(file), nil
-}
+	//go:embed get_user.sql
+	GetUser string
 
-type Queries struct {
-	AddUser         string
-	GetUser         string
-	SaveRefresh     string
-	DelRefresh      string
-	ClrExpRefresh   string
+	//go:embed check_user_exists.sql
 	CheckUserExists string
-	GetUserTokens   string
-	GetUserInfo     string
-}
 
-func GetQueries() (*Queries, error) {
-	var err error
-	get := func(key string) string {
-		if err != nil {
-			return ""
-		}
-		var val string
-		val, err = getQuery(key + ".sql")
-		return val
-	}
+	//go:embed get_user_info.sql
+	GetUserInfo string
 
-	q := Queries{
-		AddUser:         get("add_user"),
-		GetUser:         get("get_user"),
-		SaveRefresh:     get("save_refresh"),
-		DelRefresh:      get("delete_refresh"),
-		ClrExpRefresh:   get("clear_expired_refresh_tokens"),
-		CheckUserExists: get("check_user_exists"),
+	//go:embed get_user_tokens.sql
+	GetUserTokens string
 
-		GetUserTokens: get("get_user_tokens"),
-		GetUserInfo:   get("get_user_info"),
-	}
+	//go:embed save_refresh.sql
+	SaveRefresh string
 
-	return &q, err
-}
+	//go:embed delete_refresh.sql
+	DeleteRefresh string
+
+	//go:embed clear_expired_refresh_tokens.sql
+	ClearExpiredRefreshTokens string
+)
