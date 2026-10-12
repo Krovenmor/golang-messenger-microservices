@@ -1,71 +1,39 @@
 package config
 
 import (
-	"MyMessenger/pkg/config"
 	"time"
 )
 
 type AuthConfig struct {
-	PrvKey []byte
+	PrvKey []byte `env:"JWT_PRVKEY_PATH,file"`
 
-	AccessTokenTTL  time.Duration
-	RefreshTokenTTL time.Duration
+	AccessTokenTTL  time.Duration `env:"JWT_ACCESS_TTL"`
+	RefreshTokenTTL time.Duration `env:"JWT_REFRESH_TTL"`
 
-	VerificationCodeTTL time.Duration
+	VerificationCodeTTL time.Duration `env:"VERIFICATION_CODES_TTL"`
 }
 
 type HashConfig struct {
-	Memory      int
-	Iterations  int
-	Parallelism int
-	SaltLength  int
-	KeyLength   int
+	Memory      int `env:"HASH_MEMORY"`
+	Iterations  int `env:"HASH_ITERATIONS"`
+	Parallelism int `env:"HASH_PARALLELISM"`
+	SaltLength  int `env:"HASH_SALT_LENGTH"`
+	KeyLength   int `env:"HASH_KEY_LENGTH"`
 }
 
 type RedisConfig struct {
-	RepoLoginPrefix string
-	RepoTokenPrefix string
+	RepoLoginPrefix string `env:"BAN_REPO_LOGIN_PREFIX"`
+	RepoTokenPrefix string `env:"BAN_REPO_TOKEN_PREFIX"`
 
-	CacheTTLPrefix string
+	CacheTTLPrefix string `env:"CACHE_TTL_PREFIX"`
 }
 
-func GetAuthConfig() (*AuthConfig, error) {
-	r := config.NewConfigReader()
+type ValidationConfig struct {
+	PassMinLength int `env:"PASS_MIN_LENGTH"`
+	PassMaxLength int `env:"PASS_MAX_LENGTH"`
 
-	conf := AuthConfig{
-		AccessTokenTTL:  r.GetDuration("JWT_ACCESS_TTL"),
-		RefreshTokenTTL: r.GetDuration("JWT_REFRESH_TTL"),
-		PrvKey:          r.GetBytes("JWT_PRVKEY_PATH"),
+	LoginMinLength int `env:"LOGIN_MIN_LENGTH"`
+	LoginMaxLength int `env:"LOGIN_MAX_LENGTH"`
 
-		VerificationCodeTTL: r.GetDuration("VERIFICATION_CODES_TTL"),
-	}
-
-	return &conf, r.Err()
-}
-
-func GetHashConfig() (*HashConfig, error) {
-	r := config.NewConfigReader()
-
-	conf := HashConfig{
-		Memory:      r.GetInt("HASH_MEMORY"),
-		Iterations:  r.GetInt("HASH_ITERATIONS"),
-		Parallelism: r.GetInt("HASH_PARALLELISM"),
-		SaltLength:  r.GetInt("HASH_SALT_LENGTH"),
-		KeyLength:   r.GetInt("HASH_KEY_LENGTH"),
-	}
-
-	return &conf, r.Err()
-}
-
-func GetRedisConfig() (*RedisConfig, error) {
-	r := config.NewConfigReader()
-
-	conf := RedisConfig{
-		RepoLoginPrefix: r.GetString("BAN_REPO_LOGIN_PREFIX"),
-		RepoTokenPrefix: r.GetString("BAN_REPO_TOKEN_PREFIX"),
-
-		CacheTTLPrefix: r.GetString("CACHE_TTL_PREFIX"),
-	}
-
-	return &conf, r.Err()
+	RefreshTokenLen int `env:"REFRESH_TOKEN_LEN"`
 }

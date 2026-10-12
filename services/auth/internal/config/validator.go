@@ -1,16 +1,12 @@
 package config
 
 import (
-	"MyMessenger/pkg/config"
 	"MyMessenger/pkg/utils"
+	"fmt"
 )
 
-func SetupValidator() error {
-	r := config.NewConfigValidator(utils.Validator)
-
-	r.SetRangesAliasBasic("auth_password", "PASS_MIN_LENGTH", "PASS_MAX_LENGTH", "notblank")
-	r.SetRangesAlias("auth_login", "LOGIN_MIN_LENGTH", "LOGIN_MAX_LENGTH")
-	r.SetLenAliasBasic("refresh_token", "REFRESH_TOKEN_LEN", "")
-
-	return r.Err()
+func SetupValidator(conf *ValidationConfig) {
+	utils.Validator.RegisterAlias("auth_password", fmt.Sprintf("required,min=%d,max=%d,notblank", conf.PassMinLength, conf.PassMaxLength))
+	utils.Validator.RegisterAlias("auth_login", fmt.Sprintf("required,min=%d,max=%d,alphanum", conf.LoginMinLength, conf.LoginMaxLength))
+	utils.Validator.RegisterAlias("refresh_token", fmt.Sprintf("required,len=%d", conf.RefreshTokenLen))
 }

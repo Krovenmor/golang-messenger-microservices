@@ -49,9 +49,10 @@ func GetModule() fx.Option {
 
 		// Configs
 		fx.Provide(
-			config.GetAuthConfig,
-			config.GetHashConfig,
-			config.GetRedisConfig,
+			stdconfig.Parse[config.AuthConfig],
+			stdconfig.Parse[config.HashConfig],
+			stdconfig.Parse[config.RedisConfig],
+			stdconfig.Parse[config.ValidationConfig],
 			stdconfig.GetRepoConfig,
 			stdconfig.GetServConfig,
 			stdconfig.GetRedisChannelsConfig,
