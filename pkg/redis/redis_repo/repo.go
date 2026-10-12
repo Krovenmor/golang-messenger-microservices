@@ -53,6 +53,14 @@ func (r *RedisRepo) PutVal(ctx context.Context, key, val string, ttl time.Durati
 	return nil
 }
 
+func (r *RedisRepo) PutValNX(ctx context.Context, key, val string, ttl time.Duration) (bool, error) {
+	ok, err := r.rd.SetNX(ctx, r.toKey(key), val, ttl).Result()
+	if err != nil {
+		return false, fmt.Errorf("PutValNX: trouble with setnx, err: %w", err)
+	}
+	return ok, nil
+}
+
 func (r *RedisRepo) PutKeys(ctx context.Context, keys []string, ttl time.Duration) error {
 	if len(keys) == 0 {
 		return nil
