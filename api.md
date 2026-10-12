@@ -2,46 +2,78 @@
 Errors are returned as JSON with `Content-Type: application/json`:
 ```json
 {
-    "error": "error description"
+    "error": "error description",
+
+    // Optional, only when the error is bound to specific request fields
+    "fields": {
+        "login": { "reason": "min", "param": "5" },
+        "email": { "reason": "taken" }
+    }
 }
 ```
+- `fields.<name>.reason`: failed rule - `required`, `min`, `max`, `len`, `email`, `alphanum`, `notblank` (request validation) or `invalid`, `taken` (business errors)
+- `fields.<name>.param`: rule parameter if the rule has one (`min`/`max`/`len` length)
+- Request body validation errors: 400, `"invalid fields"` with `fields`, or `"invalid request body"` for malformed JSON
 - 401 from endpoints protected by access token returns the same format (all services)
-- Request body validation errors: 400, `"invalid request body"` or `"invalid fields: login, password"`
 - Any internal error: 500, `"internal error"`
 - Auth API fully uses this format, other services are being migrated
 
 # **Auth API:**  
-## **"POST /api/auth/send-code"** - send code to user email (needs for register)
-### Request body:
-```json
-{
-    "email": "user@email.com"
-}  
-```
-### Response body:
-```json
-{
-    "expiresIn": 300,   // In seconds
-	"retryAfter": 300    // In seconds
-}  
-```
-### Errors:
-- 400 `"verification code already sent"` - previous code for this email is still active
-
-## **"POST /api/auth/register"** - register a new user  
+## **"POST /api/auth/register"** - start registration, sends verification code to email
 ### Request body:
 ```json
 {
     "login": "YourLogin",
     "password": "YourPassword",
-    "email": "user@email.com",
-    "code": "verification code from /send-code"
+    "email": "user@email.com"
 }  
 ```
-- On success code: 201
+### Response body (202):
+```json
+{
+    "registrationId": "UUID of pending registration",
+    "expiresIn": 300,   // Code lifetime, in seconds
+    "retryAfter": 300   // Cooldown before /register/resend, in seconds
+}  
+```
+- Pending registration lives for 1 hour, then it must be started again
+- If the email is already registered, the response is the same, but instead of a code the email owner receives a notification about the registration attempt (confirm for such registration always fails with `"invalid verification code"`)
 ### Errors:
-- 400 `"invalid verification code"` - no code was sent to this email, it expired or does not match
-- 400 `"login or email already taken"`
+- 400 `"login already taken"`, `fields.login.reason = "taken"`
+- 400 `"verification code already sent"` - cooldown for this email is still active
+
+## **"POST /api/auth/register/resend"** - send a new verification code
+### Request body:
+```json
+{
+    "registrationId": "UUID from /register"
+}  
+```
+### Response body:
+```json
+{
+    "expiresIn": 300,
+    "retryAfter": 300
+}  
+```
+### Errors:
+- 400 `"registration not found or expired"`
+- 400 `"verification code already sent"`
+
+## **"POST /api/auth/register/confirm"** - confirm registration with code from email
+### Request body:
+```json
+{
+    "registrationId": "UUID from /register",
+    "code": "6 digits from email"
+}  
+```
+- On success code: 201, after that use /login
+### Errors:
+- 400 `"registration not found or expired"`
+- 400 `"invalid verification code"`, `fields.code.reason = "invalid"` - wrong or expired code
+- 400 `"login already taken"`, `fields.login.reason = "taken"` - login was taken while registration was pending
+- 400 `"email already taken"`, `fields.email.reason = "taken"` - email was registered while registration was pending
 
 ## **"POST /api/auth/login"** - LogIn, get JWT tokens  
 ### Request body:
