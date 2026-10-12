@@ -6,11 +6,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 func Send[T any](w http.ResponseWriter, toSend *T) {
@@ -18,8 +18,7 @@ func Send[T any](w http.ResponseWriter, toSend *T) {
 	w.WriteHeader(http.StatusOK)
 	err := json.NewEncoder(w).Encode(toSend)
 	if err != nil {
-		log.Printf("Send: trouble with encoding, err: %q", err)
-		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		zap.L().Error("failed to encode response", zap.Error(err))
 	}
 }
 
@@ -28,8 +27,7 @@ func SendWithStatus[T any](w http.ResponseWriter, toSend *T, status int) {
 	w.WriteHeader(status)
 	err := json.NewEncoder(w).Encode(toSend)
 	if err != nil {
-		log.Printf("SendWithStatus: trouble with encoding, err: %q", err)
-		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		zap.L().Error("failed to encode response", zap.Error(err))
 	}
 }
 
@@ -54,9 +52,7 @@ func GetUuidFromContext(r *http.Request) (uuid.UUID, error) {
 	sUserId := r.Context().Value(jwt.UserIdKey).(string)
 	uUserId, err := uuid.Parse(sUserId)
 	if err != nil {
-		err := fmt.Errorf("GetUuidFromContext(): trouble with parsing uuid: %w", err)
-		log.Print(err.Error())
-		return uUserId, err
+		return uUserId, fmt.Errorf("parse user id from context: %w", err)
 	}
 	return uUserId, nil
 }

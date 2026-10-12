@@ -2,36 +2,37 @@ package redis
 
 import (
 	"MyMessenger/pkg/broker"
+	"MyMessenger/pkg/logger"
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 type RedisPublisher struct {
 	rdClient *redis.Client
+	log      *logger.Logger
 }
 
-func NewRedisPublisher(rdClient *redis.Client) *RedisPublisher {
+func NewRedisPublisher(rdClient *redis.Client, log *logger.Logger) *RedisPublisher {
 	return &RedisPublisher{
 		rdClient: rdClient,
+		log:      log,
 	}
 }
 
 func (p *RedisPublisher) PublishEvent(ctx context.Context, channel string, event any) error {
 	data, err := json.Marshal(event)
 	if err != nil {
-		log.Printf("PublishEvent: trouble with Marshaling event:%v, err:%q", event, err.Error())
-		return err
+		return fmt.Errorf("marshal event: %w", err)
 	}
 	err = p.rdClient.Publish(ctx, channel, data).Err()
 	if err != nil {
-		log.Printf("PublishEvent: trouble with Publishing event:%v, err:%q, to:%q", event, err.Error(), channel)
-		return err
+		return fmt.Errorf("publish to %q: %w", channel, err)
 	}
-	log.Printf("PublishEvent: Publish to ch: %q", channel)
+	p.log.Ctx(ctx).Debug("event published", zap.String("channel", channel))
 	return nil
 }
 
@@ -46,27 +47,19 @@ func PublishEventToGroup[T WithString](ctx context.Context, p *RedisPublisher, p
 
 	data, err := json.Marshal(event)
 	if err != nil {
-		log.Printf("PublishEventToGroup: trouble with Marshaling event: %v, err: %v", event, err)
-		return err
+		return fmt.Errorf("marshal event: %w", err)
 	}
 
 	_, err = p.rdClient.Pipelined(ctx, func(pipe redis.Pipeliner) error {
 		for _, arg := range group {
-			channel := fmt.Sprintf(pattern, arg.String())
-			err := pipe.Publish(ctx, channel, data).Err()
-			if err != nil {
-				log.Printf("PublishEventToGroup: Publish err:%q, to ch: %q", err, channel)
-			} else {
-				log.Printf("PublishEventToGroup: Publish to ch: %q", channel)
-			}
+			pipe.Publish(ctx, fmt.Sprintf(pattern, arg.String()), data)
 		}
 		return nil
 	})
-
 	if err != nil {
-		log.Printf("PublishEventToGroup: pipeline publish error for pattern %q: %v", pattern, err)
-		return err
+		return fmt.Errorf("publish to group %q: %w", pattern, err)
 	}
 
+	p.log.Ctx(ctx).Debug("event published to group", zap.String("pattern", pattern), zap.Int("size", len(group)))
 	return nil
 }

@@ -3,13 +3,14 @@ package reader
 import (
 	"MyMessenger/pkg/broker"
 	"MyMessenger/pkg/config"
+	"MyMessenger/pkg/logger"
 	pkgredis "MyMessenger/pkg/redis"
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
 type CallbackReader interface {
@@ -21,14 +22,16 @@ type CallbackReader interface {
 type RedisProfileReader struct {
 	reader  CallbackReader
 	infoStr string
+	log     *logger.Logger
 }
 
-func NewRedisProfileReader(lf fx.Lifecycle,
+func NewRedisProfileReader(lf fx.Lifecycle, log *logger.Logger,
 	rdClient *redis.Client, reader CallbackReader,
 	conf *config.RedisChannelsConfig) *RedisProfileReader {
 
 	r := &RedisProfileReader{
 		reader: reader,
+		log:    log,
 	}
 
 	serviceName := reader.GetServiceName()
@@ -37,16 +40,14 @@ func NewRedisProfileReader(lf fx.Lifecycle,
 
 	r.infoStr = fmt.Sprintf("info:stream:%q:group:%q:consumer:%q", conf.ProfileStream, groupName, consumerName)
 
-	consumer := pkgredis.NewRedisStreamsConsumer(rdClient, conf.ProfileStream, groupName, consumerName)
-	RegisterStreamsReader(lf, consumer, r.onEvent)
+	consumer := pkgredis.NewRedisStreamsConsumer(rdClient, log, conf.ProfileStream, groupName, consumerName)
+	RegisterStreamsReader(lf, log, consumer, r.onEvent)
 
 	return r
 }
 
 func (r *RedisProfileReader) toEventErr(err error) error {
-	err = fmt.Errorf("redisReader.onEvent(), err:%w:%s", err, r.infoStr)
-	log.Printf("%q", err)
-	return err
+	return fmt.Errorf("profile event: %w: %s", err, r.infoStr)
 }
 
 func (r *RedisProfileReader) onEvent(ctx context.Context, event broker.ProfileEventDTO) error {
@@ -57,8 +58,9 @@ func (r *RedisProfileReader) onEvent(ctx context.Context, event broker.ProfileEv
 			return r.toEventErr(err)
 		}
 	default:
-		log.Printf("redisReader.onEvent(): unknown event=%q", event.Type)
+		r.log.Ctx(ctx).Warn("unknown profile event", zap.String("type", string(event.Type)))
+		return nil
 	}
-	log.Printf("redisReader.onEvent(): success event=%v", event)
+	r.log.Ctx(ctx).Debug("profile event handled", zap.String("type", string(event.Type)))
 	return nil
 }

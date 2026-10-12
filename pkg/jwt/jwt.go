@@ -4,7 +4,6 @@ import (
 	"MyMessenger/pkg/config"
 	"crypto/ed25519"
 	"fmt"
-	"log"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -30,12 +29,11 @@ type JWTChecker struct {
 func NewJwtCheckerConf(conf config.JwtCheckerConf) (*JWTChecker, error) {
 	pubKey, err := jwt.ParseEdPublicKeyFromPEM(conf.PubKey)
 	if err != nil {
-		log.Printf("NewJwtCheckerConf(): Trouble with parsing pubKey: %q", err.Error())
-		return nil, err
+		return nil, fmt.Errorf("parse public key: %w", err)
 	}
 	edKey, ok := pubKey.(ed25519.PublicKey)
 	if !ok {
-		return nil, fmt.Errorf("GetNewJwtGenerator: key is not of type ed25519.PrivateKey")
+		return nil, fmt.Errorf("public key is not of type ed25519.PublicKey")
 	}
 	return &JWTChecker{pubKey: edKey, aTokenLen: conf.ATokenLen}, nil
 }

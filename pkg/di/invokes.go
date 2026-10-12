@@ -2,18 +2,30 @@ package di
 
 import (
 	"MyMessenger/pkg/config"
+	"MyMessenger/pkg/logger"
+	"MyMessenger/pkg/tracing"
 	"context"
-	"log"
+	"errors"
 	"net"
 	"net/http"
 
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
-func InvokeServer(lf fx.Lifecycle, conf config.ServConfig, h http.Handler) {
+const HealthPath = "/healthz"
+
+func InvokeServer(lf fx.Lifecycle, conf config.ServConfig, h http.Handler, log *logger.Logger) {
+	instrumented := tracing.HTTPMiddleware(log.HTTPMiddleware(h))
 	serv := http.Server{
-		Addr:    conf.Address,
-		Handler: h,
+		Addr: conf.Address,
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == HealthPath {
+				h.ServeHTTP(w, r)
+				return
+			}
+			instrumented.ServeHTTP(w, r)
+		}),
 	}
 	lf.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
@@ -21,17 +33,17 @@ func InvokeServer(lf fx.Lifecycle, conf config.ServConfig, h http.Handler) {
 			if err != nil {
 				return err
 			}
-			log.Printf("Server started on %q", serv.Addr)
+			log.Info("server started", zap.String("address", serv.Addr))
 			go func() {
 				err := serv.Serve(l)
-				if err != nil {
-					log.Printf("Trouble with serv.Serve(l), err: %q", err)
+				if err != nil && !errors.Is(err, http.ErrServerClosed) {
+					log.Error("server stopped with error", zap.Error(err))
 				}
 			}()
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			log.Printf("Stopping server")
+			log.Info("stopping server")
 			return serv.Shutdown(ctx)
 		},
 	})

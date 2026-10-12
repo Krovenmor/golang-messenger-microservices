@@ -1,11 +1,13 @@
 package jwt
 
 import (
+	"MyMessenger/pkg/logger"
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"strings"
+
+	"go.uber.org/zap"
 )
 
 var (
@@ -18,11 +20,13 @@ type ExtCheckFunc func(w http.ResponseWriter, r *http.Request, c *TokenClaims) e
 type Authenticator struct {
 	checker  JWTChecker
 	extCheck ExtCheckFunc
+	log      *logger.Logger
 }
 
-func NewAuthenticator(checker *JWTChecker) *Authenticator {
+func NewAuthenticator(checker *JWTChecker, log *logger.Logger) *Authenticator {
 	return &Authenticator{
 		checker: *checker,
+		log:     log,
 	}
 }
 
@@ -50,19 +54,16 @@ func GetBearerToken(r *http.Request) (string, error) {
 
 func (a *Authenticator) Middleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		log.Printf("Income request to: %q, from: %q", r.URL.Path, r.RemoteAddr)
-
 		token, err := GetBearerToken(r)
 		if err != nil {
-			log.Printf("GetBearerToken: %q", err)
+			a.log.Ctx(r.Context()).Debug("no bearer token", zap.Error(err))
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
 		claims, err := a.checker.IsValidAccess(token)
 		if err != nil {
-			log.Printf("Not valid token, err: %q", err)
+			a.log.Ctx(r.Context()).Debug("invalid access token", zap.Error(err))
 			http.Error(w, "Bad token", http.StatusUnauthorized)
 			return
 		}

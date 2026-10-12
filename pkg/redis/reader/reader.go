@@ -1,12 +1,13 @@
 package reader
 
 import (
+	"MyMessenger/pkg/logger"
 	"context"
 	"encoding/json"
-	"log"
 	"sync"
 
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
 type Subscriber interface {
@@ -18,12 +19,13 @@ type reader[Event any] struct {
 	closeCh func()
 	channel string
 	wg      sync.WaitGroup
+	log     *zap.Logger
 
 	toDo func(ctx context.Context, event Event)
 }
 
-func RegisterReader[Event any](lf fx.Lifecycle, sub Subscriber, channel string, toDo func(ctx context.Context, event Event)) {
-	r := &reader[Event]{channel: channel, toDo: toDo}
+func RegisterReader[Event any](lf fx.Lifecycle, log *logger.Logger, sub Subscriber, channel string, toDo func(ctx context.Context, event Event)) {
+	r := &reader[Event]{channel: channel, toDo: toDo, log: log.With(zap.String("channel", channel))}
 
 	ctxC, ctxCancel := context.WithCancel(context.Background())
 
@@ -57,8 +59,8 @@ func RegisterReader[Event any](lf fx.Lifecycle, sub Subscriber, channel string, 
 }
 
 func (r *reader[Event]) startReader(ctx context.Context) {
-	log.Printf("Reader started on %q", r.channel)
-	defer log.Printf("Reader stopped on %q", r.channel)
+	r.log.Info("reader started")
+	defer r.log.Info("reader stopped")
 
 	for {
 		select {
@@ -69,7 +71,7 @@ func (r *reader[Event]) startReader(ctx context.Context) {
 			var event Event
 			err := json.Unmarshal(msg, &event)
 			if err != nil {
-				log.Printf("reader [%s]: Trouble with unmarshaling Event, err: %q", r.channel, err)
+				r.log.Error("failed to unmarshal event", zap.Error(err))
 				continue
 			}
 			r.toExec(ctx, event)
@@ -83,7 +85,7 @@ func (r *reader[Event]) startReader(ctx context.Context) {
 func (r *reader[Event]) toExec(ctx context.Context, event Event) {
 	defer func() {
 		if rec := recover(); rec != nil {
-			log.Printf("reader [%s]: recovered from panic during event execution: %v", r.channel, rec)
+			r.log.Error("recovered from panic during event execution", zap.Any("panic", rec), zap.Stack("stack"))
 		}
 	}()
 

@@ -1,21 +1,23 @@
 package redis
 
 import (
+	"MyMessenger/pkg/logger"
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 type CallbackFunc = func(ctx context.Context, msg redis.XMessage)
 
 type RedisStreamsConsumer struct {
 	rdClient *redis.Client
+	log      *logger.Logger
 
 	stream   string
 	group    string
@@ -30,9 +32,10 @@ func GenUniqueConsumerName(serviceName string) string {
 	return fmt.Sprintf("%s-%s-%d", serviceName, host, os.Getpid())
 }
 
-func NewRedisStreamsConsumer(rdClient *redis.Client, stream, group, consumer string) *RedisStreamsConsumer {
+func NewRedisStreamsConsumer(rdClient *redis.Client, log *logger.Logger, stream, group, consumer string) *RedisStreamsConsumer {
 	return &RedisStreamsConsumer{
 		rdClient: rdClient,
+		log:      log,
 		stream:   stream,
 		group:    group,
 		consumer: consumer,
@@ -42,8 +45,7 @@ func NewRedisStreamsConsumer(rdClient *redis.Client, stream, group, consumer str
 func (r *RedisStreamsConsumer) InitGroup(ctx context.Context) error {
 	err := r.rdClient.XGroupCreateMkStream(ctx, r.stream, r.group, "0").Err()
 	if err != nil && !strings.Contains(err.Error(), "BUSYGROUP") {
-		log.Printf("RedisStreamsConsumer: trouble with XGroupCreateMkStream, err: %q", err)
-		return err
+		return fmt.Errorf("create consumer group %q: %w", r.group, err)
 	}
 	return nil
 }
@@ -52,7 +54,7 @@ func (r *RedisStreamsConsumer) Start(ctx context.Context, callback CallbackFunc)
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("Consumer [%s] stopped, group: %s", r.consumer, r.group)
+			r.log.Info("streams consumer stopped", zap.String("consumer", r.consumer), zap.String("group", r.group))
 			return
 
 		default:
@@ -66,7 +68,7 @@ func (r *RedisStreamsConsumer) Start(ctx context.Context, callback CallbackFunc)
 
 			if err != nil {
 				if !errors.Is(err, redis.Nil) {
-					log.Printf("[%s] XReadGroup error: %v", r.group, err)
+					r.log.Error("streams read failed", zap.String("group", r.group), zap.Error(err))
 					time.Sleep(time.Second)
 				}
 				continue

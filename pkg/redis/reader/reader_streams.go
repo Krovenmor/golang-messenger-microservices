@@ -1,14 +1,16 @@
 package reader
 
 import (
+	"MyMessenger/pkg/logger"
 	rpkg "MyMessenger/pkg/redis"
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 	"sync"
 
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
 type RegisterStreamsReaderToDoFunc[Event any] func(ctx context.Context, event Event) error
@@ -16,12 +18,13 @@ type RegisterStreamsReaderToDoFunc[Event any] func(ctx context.Context, event Ev
 type readerStreams[Event any] struct {
 	consumer *rpkg.RedisStreamsConsumer
 	wg       sync.WaitGroup
+	log      *logger.Logger
 
 	toDo RegisterStreamsReaderToDoFunc[Event]
 }
 
-func RegisterStreamsReader[Event any](lf fx.Lifecycle, consumer *rpkg.RedisStreamsConsumer, toDo RegisterStreamsReaderToDoFunc[Event]) {
-	r := &readerStreams[Event]{toDo: toDo, consumer: consumer}
+func RegisterStreamsReader[Event any](lf fx.Lifecycle, log *logger.Logger, consumer *rpkg.RedisStreamsConsumer, toDo RegisterStreamsReaderToDoFunc[Event]) {
+	r := &readerStreams[Event]{toDo: toDo, consumer: consumer, log: log}
 
 	ctxC, ctxCancel := context.WithCancel(context.Background())
 
@@ -52,13 +55,13 @@ func RegisterStreamsReader[Event any](lf fx.Lifecycle, consumer *rpkg.RedisStrea
 func (r *readerStreams[Event]) callback(ctx context.Context, msg redis.XMessage) {
 	defer func() {
 		if rec := recover(); rec != nil {
-			log.Printf("reader: recovered from panic during event execution: %v", rec)
+			r.log.Error("recovered from panic during event execution", zap.Any("panic", rec), zap.Stack("stack"))
 		}
 	}()
 
 	raw, ok := msg.Values["event"].(string)
 	if !ok {
-		log.Printf("readerStreams: unexpected type for event field: %T", msg.Values["event"])
+		r.log.Error("unexpected type for event field", zap.String("type", fmt.Sprintf("%T", msg.Values["event"])), zap.String("message_id", msg.ID))
 		_ = r.consumer.Ack(ctx, msg.ID)
 		return
 	}
@@ -66,19 +69,19 @@ func (r *readerStreams[Event]) callback(ctx context.Context, msg redis.XMessage)
 	var event Event
 	err := json.Unmarshal([]byte(raw), &event)
 	if err != nil {
-		log.Printf("readerStreams: trouble with Unmarshal in callback, err: %v", err)
+		r.log.Error("failed to unmarshal event", zap.String("message_id", msg.ID), zap.Error(err))
 		_ = r.consumer.Ack(ctx, msg.ID)
 		return
 	}
 
 	err = r.toDo(ctx, event)
 	if err != nil {
-		log.Printf("readerStreams: trouble with toDo in callback, err: %v", err)
+		r.log.Ctx(ctx).Error("failed to handle event", zap.String("message_id", msg.ID), zap.Error(err))
 		return
 	}
 
 	err = r.consumer.Ack(ctx, msg.ID)
 	if err != nil {
-		log.Printf("reader: failed to ack message %s: %v", msg.ID, err)
+		r.log.Ctx(ctx).Error("failed to ack message", zap.String("message_id", msg.ID), zap.Error(err))
 	}
 }

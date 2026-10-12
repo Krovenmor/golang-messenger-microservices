@@ -1,27 +1,30 @@
 package redis
 
 import (
+	"MyMessenger/pkg/logger"
 	"context"
-	"log"
+	"fmt"
 
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 type RedisSubscriber struct {
 	rdClient *redis.Client
+	log      *logger.Logger
 }
 
-func NewRedisSubscriber(rdClient *redis.Client) *RedisSubscriber {
+func NewRedisSubscriber(rdClient *redis.Client, log *logger.Logger) *RedisSubscriber {
 	return &RedisSubscriber{
 		rdClient: rdClient,
+		log:      log,
 	}
 }
 
 func (s *RedisSubscriber) subscribe(ctx context.Context, sub *redis.PubSub) (<-chan []byte, func(), error) {
 	_, err := sub.Receive(ctx)
 	if err != nil {
-		log.Printf("Subscribe: Failed to sub.Receive, err: %q", err.Error())
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("subscribe receive: %w", err)
 	}
 
 	out := make(chan []byte, 10)
@@ -41,7 +44,7 @@ func (s *RedisSubscriber) subscribe(ctx context.Context, sub *redis.PubSub) (<-c
 	cancel := func() {
 		err := sub.Close()
 		if err != nil {
-			log.Printf("Subscribe: Failed to close sub, err: %q", err.Error())
+			s.log.Warn("failed to close subscription", zap.Error(err))
 		}
 	}
 

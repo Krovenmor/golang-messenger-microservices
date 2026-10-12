@@ -3,15 +3,15 @@ package repo
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
-	"log"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 )
 
-func MakeMigrations(pool *pgxpool.Pool, migrations *embed.FS) error {
+func MakeMigrations(pool *pgxpool.Pool, migrations *embed.FS) (err error) {
 	if pool == nil {
 		return fmt.Errorf("MakeMigrations(): pool == nil")
 	}
@@ -24,14 +24,11 @@ func MakeMigrations(pool *pgxpool.Pool, migrations *embed.FS) error {
 		return fmt.Errorf("MakeMigrations(): trouble with OpenDBFromPool")
 	}
 	defer func() {
-		err := db.Close()
-		if err != nil {
-			log.Printf("Trouble with db.Close(), err: %q", err)
-		}
+		err = errors.Join(err, db.Close())
 	}()
 
 	goose.SetBaseFS(*migrations)
-	err := goose.SetDialect("postgres")
+	err = goose.SetDialect("postgres")
 	if err != nil {
 		return err
 	}

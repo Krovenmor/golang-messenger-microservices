@@ -3,7 +3,7 @@ package redis
 import (
 	"MyMessenger/pkg/config"
 	"context"
-	"log"
+	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -23,8 +23,7 @@ func NewRedisClient(conf *config.RedisConfig) (*redis.Client, error) {
 
 	err := rdClient.Ping(ctx).Err()
 	if err != nil {
-		log.Printf("NewRedisSubscriber: Trouble with connecting to redis server, err: %q", err.Error())
-		return nil, err
+		return nil, fmt.Errorf("redis ping: %w", err)
 	}
 
 	return rdClient, nil
