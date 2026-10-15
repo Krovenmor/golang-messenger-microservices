@@ -1,0 +1,87 @@
+@startuml c4-container
+!include <C4/C4_Container>
+!include github-dark.iuml
+
+LAYOUT_LEFT_RIGHT()
+HIDE_STEREOTYPE()
+skinparam ranksep 45
+skinparam nodesep 20
+
+AddRelTag("async", $lineStyle = DashedLine())
+
+title Signaline — Containers (C4 L2)
+
+Person(user, "Пользователь", "Браузер")
+
+System_Boundary(signaline, "Signaline") {
+    Container(spa, "Web SPA", "React, TypeScript", "Интерфейс, шифрование на клиенте")
+    Container(edge, "edge-service", "nginx", "TLS, единая точка входа, статика")
+    Container(frontend, "frontend-service", "nginx", "Статика SPA")
+    Container(gateway, "gateway-service", "Go", "Проверка JWT, rate limiting, баны, проксирование")
+
+    Container(auth, "auth-service", "Go", "Регистрация, вход, JWT")
+    Container(profile, "profile-service", "Go", "Профили, публичные ключи")
+    Container(msg, "msg-service", "Go", "Чаты, сообщения, реакции")
+    Container(media, "media-service", "Go", "Загрузка аватаров, квоты")
+    Container(status, "status-service", "Go", "Онлайн-статусы")
+    Container(ws, "ws-service", "Go", "WebSocket, доставка событий")
+    Container(email, "email-service", "Go", "Воркер служебных писем")
+
+    ContainerDb(authDb, "auth-db", "PostgreSQL", "Учётные записи, refresh-токены", $tags="storage")
+    ContainerDb(profileDb, "profile-db", "PostgreSQL", "Профили", $tags="storage")
+    ContainerDb(msgDb, "msg-db", "PostgreSQL", "Чаты, сообщения", $tags="storage")
+    ContainerDb(mediaDb, "media-db", "PostgreSQL", "Метаданные медиа", $tags="storage")
+    ContainerDb(storage, "File storage", "Docker volume", "Аватары", $tags="storage")
+    ContainerDb(redisKv, "Redis KV", "Redis", "Баны, лимиты, коды, статусы", $tags="storage")
+    ContainerQueue(broker, "Redis Pub/Sub, Streams", "Redis", "Брокер событий, тот же инстанс Redis", $tags="storage")
+}
+
+System_Ext(smtp, "SMTP-сервер", "Почтовый провайдер")
+
+Rel_L(user, spa, "Переписывается", "HTTPS")
+Rel_L(spa, edge, "API, WebSocket", "HTTPS, WSS")
+Rel(edge, frontend, "/", "HTTP")
+Rel(edge, gateway, "/api/*", "HTTP, WS")
+Rel(edge, storage, "Берёт аватары", "статика")
+
+Rel(gateway, auth, "/api/auth", "HTTP")
+Rel(gateway, profile, "/api/profile", "HTTP")
+Rel(gateway, msg, "/api/msg", "HTTP")
+Rel(gateway, media, "/api/media", "HTTP")
+Rel(gateway, status, "/api/status", "HTTP")
+Rel(gateway, ws, "/api/ws", "WS")
+Rel(gateway, redisKv, "Лимиты, баны", "KV")
+
+Rel(auth, authDb, "Хранит учётки, сессии", "SQL")
+Rel(auth, redisKv, "Коды, баны", "KV")
+Rel(profile, profileDb, "Хранит профили", "SQL")
+Rel(msg, msgDb, "Хранит переписку", "SQL")
+Rel(media, mediaDb, "Учитывает медиа, квоты", "SQL")
+Rel(media, storage, "Сохраняет аватары")
+Rel(status, redisKv, "Статусы с TTL", "KV")
+Rel_R(ws, msg, "Список чатов", "HTTP")
+Rel_U(email, broker, "Читает задачи", "Pub/Sub", $tags="async")
+Rel_L(email, smtp, "Письма", "SMTP")
+
+Rel(msg, broker, "Публикует уведомления, читает профили", "Pub/Sub, Streams", $tags="async")
+Rel(ws, broker, "Читает уведомления; публикует статусы, нарушения", "Pub/Sub", $tags="async")
+Rel(gateway, broker, "Читает нарушения, публикует баны", "Pub/Sub", $tags="async")
+Rel(auth, broker, "Читает баны, публикует письма", "Pub/Sub", $tags="async")
+Rel(status, broker, "Читает статусы", "Pub/Sub", $tags="async")
+Rel(profile, broker, "Публикует профили", "Streams", $tags="async")
+Rel(media, broker, "Читает профили", "Streams", $tags="async")
+
+Lay_L(media, profile)
+Lay_L(profile, msg)
+Lay_L(msg, ws)
+Lay_L(ws, status)
+Lay_L(status, auth)
+
+Lay_L(storage, mediaDb)
+Lay_L(mediaDb, profileDb)
+Lay_L(profileDb, msgDb)
+Lay_L(msgDb, broker)
+Lay_L(broker, redisKv)
+Lay_L(redisKv, authDb)
+
+@enduml
