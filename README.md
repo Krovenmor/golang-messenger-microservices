@@ -1,89 +1,85 @@
-# Go Messenger Microservices
-## Стек технологий
+# Signaline
 
-* **Язык:** Go
-* **Архитектура & DI:** Event-Driven Architecture, Clean Architecture, Uber FX
-* **Базы данных & Брокеры:** PostgreSQL (pgx), Redis (Streams, Pub/Sub, KV Cache)
-* **Сеть & Транспорт:** REST API, WebSockets, HTTP Reverse Proxy
-* **Безопасность:** JWT (Ed25519 асимметричные ключи), Rate Limiting, IP/User Blacklisting
-* **Инфраструктура:** Docker, Docker Compose
+Мессенджер на Go-микросервисах со сквозным шифрованием: сообщения шифруются и расшифровываются в браузере, сервер хранит только шифротекст и публичные ключи. В репозитории лежат бэкенд (`services/`, `pkg/`) и клиент на React (`web/`).
 
----
+> Клиент в `web/` написан ИИ-агентом и нужен только для демонстрации работы API. Предмет проекта — бэкенд.
 
-## Архитектура и сервисы
+## Стек
+
+- **Бэкенд:** Go, Uber FX (DI), Clean Architecture
+- **Хранилища:** PostgreSQL (pgx, goose), Redis (Pub/Sub, Streams, KV)
+- **Транспорт:** REST, WebSocket, nginx как edge-прокси
+- **Безопасность:** JWT на Ed25519, argon2id для паролей, rate limiting, баны по IP и пользователю
+- **Клиент:** React, TypeScript, Vite, Tailwind
+- **Инфраструктура:** Docker, Docker Compose
+
+## Архитектура
+
+Все запросы заходят через `edge-service` (nginx): он отдаёт статику клиента и аватары, а `/api/*` проксирует в `gateway-service`. Gateway проверяет JWT, считает лимиты и проксирует запрос в нужный сервис. У каждого сервиса с данными своя база, общих баз между сервисами нет.
+
+### Контейнеры (C4, уровень 2)
+
+![Контейнеры Signaline](docs/architecture/c4-container.svg)
+
+Сплошные стрелки — синхронные вызовы и работа с хранилищами, пунктир — асинхронные события через брокер. «Redis KV» и «Redis Pub/Sub, Streams» — один инстанс Redis, на схеме разделён по ролям. Какие события по каким каналам ходят — на схеме ниже.
+
+Контекст системы (C4, уровень 1): [docs/architecture/c4-context.svg](docs/architecture/c4-context.svg). Исходники всех диаграмм на PlantUML лежат рядом, в [docs/architecture/](docs/architecture/).
+
+### События через Redis
+
+Асинхронные связи между сервисами идут через Redis: Pub/Sub для событий в реальном времени и Streams для профилей, которые нельзя потерять.
+
+![События через Redis](docs/architecture/redis-events.svg)
+
+### Сервисы
+
+| Сервис | Порт | Хранилище | Назначение |
+|---|---|---|---|
+| `edge` | 80, 443 | том с аватарами (чтение) | TLS, единая точка входа, раздача аватаров как статики |
+| `gateway` | 8080 | Redis | Проверка JWT, rate limiting, баны, проксирование в сервисы |
+| `auth` | 8081 | PostgreSQL, Redis | Регистрация с подтверждением почты, вход, выпуск и ротация JWT. Единственный владелец приватного ключа |
+| `msg` | 8082 | PostgreSQL | Чаты, история сообщений, реакции |
+| `ws` | 8083 | — | WebSocket-соединения, доставка событий и статусов в браузер |
+| `status` | 8084 | Redis | Онлайн-статусы пользователей с TTL |
+| `media` | 8085 | PostgreSQL, том с аватарами | Загрузка аватаров, учёт квот |
+| `profile` | 8086 | PostgreSQL | Профили, никнеймы, публичные ключи |
+| `email` | — | — | Воркер служебных писем через SMTP |
+| `frontend` | 80 | — | Статика собранного клиента |
+
+Описание всех ручек API — в [api.md](api.md).
+
+## Структура репозитория
+
 ```text
-  [Client]
-      |
-      ↓
-[edge-service] ---> [web-service] (статика фронта)
-      |
-      ↓
-[gateway-service]
-      |
-      ↓
-[internal-services]
-      ^
-      |
-[redis PubSub/Streams]
+├── certs/      # Ключи JWT и SSL-сертификаты (создаются локально, в git не попадают)
+├── config/     # env-файлы сервисов
+├── data/       # Локальное хранилище аватаров
+├── deploy/     # docker-compose.yml
+├── docs/       # Диаграммы архитектуры
+├── pkg/        # Общий код: redis, jwt, config, события брокера
+├── services/   # Микросервисы
+├── web/        # Демо-клиент на React (написан ИИ-агентом)
+└── api.md      # Документация API
 ```
 
-### Описание компонентов:
+## Запуск
 
-- **`services/edge` (Edge / Reverse Proxy):**
-  Единая внешняя точка входа для фронтенда и API-запросов. Отвечает за маршрутизацию и прямую отдачу публичной статики (аватарки пользователей).
+Нужны Docker с Compose и OpenSSL.
 
-- **`services/gateway` (API Gateway & Traffic Control):**
-  Внутренний шлюз для защиты сервисов. Считает обращения по IP/User ID (Rate Limiter), блокирует нарушителей и слушает служебные события на бан от других микросервисов.
-
-- **`services/auth` (Сервис авторизации):**
-  Единственный сервис, хранящий приватный ключ для подписи асимметричных JWT-токенов. Отвечает за регистрацию и аутентификацию учетных записей.
-
-- **`services/profile` (Сервис профилей):**
-  Хранит пользовательские профили, никнеймы и метаданные. При создании профиля публикует событие в Redis Streams для синхронизации с другими доменами.
-
-- **`services/msg` (Сервис сообщений):**
-  Управляет созданием диалогов/групповых чатов, сохранением истории переписки и реакциями.
-
-- **`services/media` (Медиа-хранилище):**
-  Принимает пользовательские файлы, ведет строгий учет дисковых квот (занятое/доступное место) и валидирует входные форматы.
-
-- **`services/status` (Сервис статусов):**
-  Отслеживает сетевой статус пользователей (онлайн/офлайн) через временные ключи и события в Redis.
-
-- **`services/ws` (WebSocket Gateway):**
-  Управляет пулом постоянных соединений с клиентами. Подписывается на шину событий Redis (Pub/Sub) и транслирует входящие сообщения и системные уведомления в браузеры.
-
-- **`services/email` (Email Worker):**
-  Фоновый воркер для отправки служебных писем, читающий задачи из очереди Redis.
-
----
-
-## Структура проекта
-```text
-├── config/       # Конфигурационные файлы для микросервисов
-├── data/         # Директория для локального хранения статики и медиа
-├── deploy/       # Dockerfile и docker-compose.yml для развертывания
-├── pkg/          # Переиспользуемые пакеты (redis, jwt-auth, config, broker-events)
-├── services/     # Исходный код микросервисов
-├── web/          # Клиентская часть для демонстрации работы API
-└ api.md          # Полная документация по API
-```
-
-## Запуск проекта
-### Ручной запуск
-1. Заполните учетные данные SMTP в файле `config/email.env` для работы `email-service`.
-2. Сгенерируйте пару ключей Ed25519 для JWT и поместите их в `certs/jwt/` (private.key && public.key).
-```bash
-mkdir -p certs/jwt
-openssl genpkey -algorithm ed25519 -out certs/jwt/private.key
-openssl pkey -in certs/jwt/private.key -pubout -out certs/jwt/public.key
-```
-3. Сгенерируйте локальный ssl сертификат и поместите в certs/ssl/ (key.pem && cert.pem)
-```bash
-mkdir -p certs/ssl
-openssl req -x509 -newkey rsa:2048 -nodes -keyout certs/ssl/key.pem -out certs/ssl/cert.pem -days 365 -subj "/CN=localhost"
-```
-4. Запуск:
-```bash
-docker compose -f deploy/docker-compose.yml up --build -d
-```
+1. Сгенерируйте ключи Ed25519 для JWT:
+   ```bash
+   mkdir -p certs/jwt
+   openssl genpkey -algorithm ed25519 -out certs/jwt/private.key
+   openssl pkey -in certs/jwt/private.key -pubout -out certs/jwt/public.key
+   ```
+2. Сгенерируйте самоподписанный SSL-сертификат:
+   ```bash
+   mkdir -p certs/ssl
+   openssl req -x509 -newkey rsa:2048 -nodes -keyout certs/ssl/key.pem -out certs/ssl/cert.pem -days 365 -subj "/CN=localhost"
+   ```
+3. Заполните SMTP-доступы в `config/email.env`, иначе письма с кодами подтверждения не будут уходить.
+4. Поднимите всё:
+   ```bash
+   make up
+   ```
+5. Откройте https://localhost. Сертификат самоподписанный, браузер попросит подтвердить исключение.
