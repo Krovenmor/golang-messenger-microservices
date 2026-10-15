@@ -1,0 +1,73 @@
+@startuml redis-events
+!include <C4/C4_Container>
+!include github-dark.iuml
+
+LAYOUT_LEFT_RIGHT()
+HIDE_STEREOTYPE()
+skinparam ranksep 90
+skinparam nodesep 18
+
+title Signaline — события через Redis
+
+Boundary(publishers, "Публикуют") {
+    Container(gatewayPub, "gateway-service", "Go")
+    Container(authPub, "auth-service", "Go")
+    Container(wsPub, "ws-service", "Go")
+    Container(msgPub, "msg-service", "Go")
+    Container(profilePub, "profile-service", "Go")
+}
+
+Boundary(redis, "Redis") {
+    ContainerQueue(banEvent, "users:ban:event", "Pub/Sub", $tags="storage")
+    ContainerQueue(verification, "users:verification", "Pub/Sub", $tags="storage")
+    ContainerQueue(banRequest, "users:ban:request", "Pub/Sub", $tags="storage")
+    ContainerQueue(userStatus, "user:{id}:status", "Pub/Sub", $tags="storage")
+    ContainerQueue(chatEvents, "user:{id}:events\nchat:{id}:events", "Pub/Sub", $tags="storage")
+    ContainerQueue(profiles, "stream:profiles", "Streams", $tags="storage")
+}
+
+Boundary(subscribers, "Слушают") {
+    Container(authSub, "auth-service", "Go")
+    Container(emailSub, "email-service", "Go")
+    Container(gatewaySub, "gateway-service", "Go")
+    Container(statusSub, "status-service", "Go")
+    Container(wsSub, "ws-service", "Go")
+    Container(msgSub, "msg-service", "Go")
+    Container(mediaSub, "media-service", "Go")
+}
+
+Rel(gatewayPub, banEvent, "бан с TTL")
+Rel(authPub, verification, "код подтверждения")
+Rel(wsPub, banRequest, "превышение лимитов")
+Rel(wsPub, userStatus, "онлайн, печатает")
+Rel(msgPub, chatEvents, "сообщения, реакции")
+Rel(profilePub, profiles, "новый профиль")
+
+Rel(banEvent, authSub, "")
+Rel(verification, emailSub, "")
+Rel(banRequest, gatewaySub, "")
+Rel(userStatus, statusSub, "")
+Rel(userStatus, wsSub, "")
+Rel(chatEvents, wsSub, "")
+Rel(profiles, msgSub, "")
+Rel(profiles, mediaSub, "")
+
+Lay_L(gatewayPub, authPub)
+Lay_L(authPub, wsPub)
+Lay_L(wsPub, msgPub)
+Lay_L(msgPub, profilePub)
+
+Lay_L(banEvent, verification)
+Lay_L(verification, banRequest)
+Lay_L(banRequest, userStatus)
+Lay_L(userStatus, chatEvents)
+Lay_L(chatEvents, profiles)
+
+Lay_L(authSub, emailSub)
+Lay_L(emailSub, gatewaySub)
+Lay_L(gatewaySub, statusSub)
+Lay_L(statusSub, wsSub)
+Lay_L(wsSub, msgSub)
+Lay_L(msgSub, mediaSub)
+
+@enduml

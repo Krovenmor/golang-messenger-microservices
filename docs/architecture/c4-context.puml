@@ -1,0 +1,18 @@
+@startuml c4-context
+!include <C4/C4_Context>
+!include github-dark.iuml
+
+LAYOUT_LEFT_RIGHT()
+HIDE_STEREOTYPE()
+
+title Signaline — System Context (C4 L1)
+
+Person(user, "Пользователь", "Ключи шифрования хранятся только в его браузере, сервер видит лишь шифротекст")
+System(signaline, "Signaline", "Мессенджер со сквозным шифрованием: регистрация, профили, чаты, аватары, онлайн-статусы")
+System_Ext(smtp, "SMTP-сервер", "Почтовый провайдер")
+
+Rel(user, signaline, "Регистрируется, переписывается, загружает аватар", "HTTPS, WSS")
+Rel(signaline, smtp, "Отправляет письма", "SMTP")
+Rel(smtp, user, "Доставляет коды подтверждения", "Email")
+
+@enduml

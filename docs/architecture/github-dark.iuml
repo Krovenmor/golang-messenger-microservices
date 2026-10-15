@@ -1,0 +1,14 @@
+skinparam backgroundColor #0d1117
+skinparam defaultFontColor #e6edf3
+skinparam titleFontColor #e6edf3
+skinparam arrowColor #8b949e
+skinparam arrowFontColor #c9d1d9
+
+UpdateElementStyle("person", $bgColor="#8957e5", $fontColor="#ffffff", $borderColor="#a371f7")
+UpdateElementStyle("system", $bgColor="#1f6feb", $fontColor="#ffffff", $borderColor="#388bfd")
+UpdateElementStyle("container", $bgColor="#1f6feb", $fontColor="#ffffff", $borderColor="#388bfd")
+UpdateElementStyle("external_system", $bgColor="#30363d", $fontColor="#e6edf3", $borderColor="#484f58")
+UpdateBoundaryStyle($elementName="system", $bgColor="#0d1117", $fontColor="#e6edf3", $borderColor="#8b949e")
+UpdateBoundaryStyle($bgColor="#0d1117", $fontColor="#e6edf3", $borderColor="#8b949e")
+UpdateRelStyle($textColor="#c9d1d9", $lineColor="#8b949e")
+AddElementTag("storage", $bgColor="#0d419d", $fontColor="#ffffff", $borderColor="#1f6feb")
